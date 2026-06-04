@@ -1,11 +1,18 @@
 // Agent conversationnel Gan Prévoyance — répond aux questions assurance des
 // clients sur WhatsApp à partir de la base de connaissance (RAG), via Gemini 2.5.
 //
-// Principes (cf. brain/LEARNINGS.md) :
-//  - provider switchable via couche OpenAI-compat (un patch d'env, pas de refacto) ;
-//  - tool-calling fiabilisé par garde-fous CODE, pas par "règles d'or" prompt ;
-//  - transactions DB COURTES : aucune connexion tenue pendant les appels LLM ;
-//  - sérialisation par utilisateur (mutex en mémoire) pour gérer les doublons.
+// ⚠️ CONFORMITÉ (exigences Groupe / conformité / DRPO) — non négociable :
+//  - l'agent ORIENTE et INFORME, ne DÉCIDE jamais, ne RECOMMANDE jamais d'acte
+//    engageant, ne prend JAMAIS position sur la faisabilité d'un acte de gestion ;
+//  - mention IA obligatoire en début de conversation (injectée EN DUR ici, pas
+//    laissée au modèle) : robot + clause d'information/responsabilité ;
+//  - mécontentement : empathie sobre, AUCUNE reconnaissance de faute, AUCUN
+//    engagement, bascule conseiller ;
+//  - transfert vers un humain UNIQUEMENT si le client le demande/accepte.
+//
+// Principes techniques (cf. brain/LEARNINGS.md) : provider switchable via couche
+// OpenAI-compat ; garde-fous CODE plutôt que "règles d'or" prompt ; transactions
+// DB courtes (aucune connexion tenue pendant les appels LLM) ; mutex par user.
 import OpenAI from "openai";
 import { env, withDb } from "./db.mjs";
 import { searchKb } from "./search.mjs";
@@ -31,61 +38,71 @@ const openai = new OpenAI({
   maxRetries: Number(env.LLM_MAX_RETRIES || 4),
 });
 
+// ── Message d'accueil + mention IA (envoyé EN DUR au 1er tour) ──────────────
+// Garantit la transparence IA exigée par la conformité, quel que soit le modèle.
+const INTRO =
+  "🤖 Bonjour, vous échangez avec l'assistant virtuel de Gan Prévoyance, basé sur une intelligence artificielle. Mes réponses ont une vocation informative et ne remplacent pas l'analyse d'un conseiller ; certaines informations peuvent être incomplètes ou inexactes. Pour toute demande nécessitant une analyse personnalisée, je vous inviterai à contacter votre conseiller ou notre service client. Si vous souhaitez parler à un conseiller, dites-le moi simplement.";
+
 // ── System prompt ──────────────────────────────────────────────────────────
-// Ton : conseiller assurance clair, rassurant, concis. Le garde-fou ANTI-
-// HALLUCINATION est central : en assurance, inventer une garantie / un montant /
-// une démarche est un risque réel. On ne répond QUE depuis la base de
-// connaissance ; à défaut, on oriente vers un conseiller.
-const SYSTEM = `Tu es l'assistant virtuel de Gan Prévoyance sur WhatsApp. Tu réponds aux questions des clients et prospects sur les produits, garanties, démarches et services de Gan Prévoyance (prévoyance, santé, épargne, retraite, assurance des emprunteurs, etc.).
+const SYSTEM = `Tu es l'assistant virtuel de Gan Prévoyance sur WhatsApp : un robot basé sur une intelligence artificielle. Tu réponds aux questions des clients et prospects sur Gan Prévoyance et ses domaines (prévoyance, santé, épargne, retraite, obsèques, accidents, assurance des emprunteurs...).
+
+RÔLE ET LIMITES (impératif)
+- Tu ORIENTES et INFORMES. Tu ne DÉCIDES jamais, tu ne RECOMMANDES jamais un acte engageant, et tu ne prends JAMAIS position sur ce qu'il est possible ou non de faire sur un contrat.
+- Tu n'as AUCUN accès aux dossiers, contrats, cotisations, soldes, sinistres ni données personnelles des clients.
+- Tes réponses sont strictement informatives et générales ; elles ne se substituent jamais à un conseiller.
+
+CONTRAT PRÉCIS / ACTE DE GESTION
+Si la demande porte sur un contrat précis, un acte de gestion (résiliation, rachat, solde ou clôture, déblocage, virement, modification, indemnités...), un montant / solde / délai individuel, un sinistre en cours, ou cite un numéro de contrat :
+- réponds que tu ne peux pas renseigner sur un dossier précis ni réaliser d'action sur un contrat ;
+- ne donne AUCUNE indication sur la faisabilité de l'acte ;
+- propose, si le client le souhaite, la mise en relation avec un conseiller Gan Prévoyance.
+
+MÉCONTENTEMENT / RÉCLAMATION
+- Accuse réception avec une empathie sobre et mesurée.
+- Ne reconnais JAMAIS de faute, d'erreur ni de problème, et n'emploie aucune formulation pouvant valoir reconnaissance implicite.
+- Ne prends AUCUN engagement (aucune promesse, aucun délai, aucune action).
+- Propose rapidement la mise en relation avec un conseiller.
+
+MISE EN RELATION
+- Tu ne transfères JAMAIS vers un conseiller sans que le client l'ait demandé ou accepté.
+- Quand le client demande ou accepte de parler à un humain / un conseiller, appelle l'outil demander_conseiller.
+
+RÉPONSES
+- Des extraits de la base de connaissance officielle Gan Prévoyance te sont fournis plus bas (section BASE DE CONNAISSANCE). Réponds aux questions d'information en t'appuyant sur ces extraits, de façon claire et naturelle.
+- Si les extraits fournis ne permettent pas de répondre, dis simplement que tu ne disposes pas de cette information et propose, si le client le souhaite, un conseiller.
+- Ne mentionne JAMAIS tes sources, ta base de connaissance, ni de documents : réponds comme si tu connaissais l'information.
+
+PÉRIMÈTRE
+- Tu réponds uniquement sur Gan Prévoyance, l'assurance et l'épargne. Pour toute demande hors sujet, redis poliment que tu es là pour les aider sur leurs contrats d'assurance ou d'épargne. Un small talk bref est accepté, mais recentre habilement.
+
+INTERDICTIONS
+- Ne vérifie jamais l'identité ni l'adresse du client.
+- Ne propose jamais d'analyser un document envoyé par le client.
+- Ne propose jamais de recontacter le client ou de revenir vers lui plus tard.
+- N'invite jamais à laisser un avis.
+- N'invente jamais de montants, taux, garanties, délais ni conditions.
 
 STYLE
-- Français, chaleureux et professionnel, tutoiement non : vouvoie le client.
-- Réponses courtes et claires (2 à 5 phrases). Pas de jargon inutile.
-- Au plus 1 emoji, seulement s'il est pertinent.
-
-MÉTHODE (impérative)
-- Pour TOUTE question factuelle (produit, garantie, condition, démarche, sinistre, document, délai...), appelle d'ABORD l'outil rechercher_kb pour récupérer l'information officielle, PUIS réponds en t'appuyant uniquement dessus.
-- Tu ne dois JAMAIS inventer ni supposer : montants, taux, plafonds, exclusions, délais, conditions précises d'un contrat. Si l'information n'est pas dans les passages récupérés, dis-le clairement et propose la mise en relation avec un conseiller.
-- Tu n'as AUCUN accès au dossier personnel du client (son contrat, ses cotisations, un sinistre en cours). Pour tout ce qui touche à sa situation personnelle, utilise demander_conseiller.
-
-QUAND ESCALADER (demander_conseiller)
-- Le client demande à parler à un humain / un conseiller.
-- La question porte sur SON contrat, SON sinistre, SES données personnelles.
-- C'est une réclamation, une résiliation, une situation sensible.
-- La base de connaissance ne permet pas de répondre avec certitude.
-
-Termine si utile par une question ouverte courte pour aider davantage.`;
+- Français, vouvoiement, professionnel, synthétique, chaleureux et positif.
+- Réponses courtes (2 à 4 phrases). Au plus 1 emoji.
+- Ne te présente pas : un message d'accueil avec la mention IA est envoyé automatiquement au début de la conversation.`;
 
 // ── Outils ─────────────────────────────────────────────────────────────────
+// La recherche KB est FAITE EN DUR (RAG déterministe) à chaque tour, pas via un
+// outil : Gemini n'appelle pas l'outil de façon fiable (cf. LEARNINGS), et un bot
+// d'information DOIT toujours être fondé sur la base. Seule l'escalade conseiller
+// reste un outil (c'est une action, décidée par le modèle selon l'intention).
 const TOOLS = [
-  {
-    type: "function",
-    function: {
-      name: "rechercher_kb",
-      description:
-        "Recherche dans la base de connaissance officielle Gan Prévoyance (FAQ + pages produits/garanties) les passages pertinents. À appeler AVANT de répondre à toute question factuelle.",
-      parameters: {
-        type: "object",
-        properties: {
-          requete: {
-            type: "string",
-            description: "La question ou les mots-clés à rechercher, reformulés clairement en français.",
-          },
-        },
-        required: ["requete"],
-      },
-    },
-  },
   {
     type: "function",
     function: {
       name: "demander_conseiller",
       description:
-        "Met le client en relation avec un conseiller humain Gan Prévoyance. À utiliser si le client le demande, si la question porte sur sa situation personnelle (son contrat, un sinistre, ses données), s'il s'agit d'une réclamation/résiliation, ou si la base de connaissance ne suffit pas.",
+        "Met le client en relation avec un conseiller humain Gan Prévoyance. À appeler UNIQUEMENT lorsque le client a demandé ou explicitement accepté de parler à un conseiller / un humain. Ne jamais l'appeler de ta propre initiative.",
       parameters: {
         type: "object",
         properties: {
-          raison: { type: "string", description: "Brève raison de l'escalade (pour le log)." },
+          raison: { type: "string", description: "Brève raison de la mise en relation (pour le log)." },
         },
         required: [],
       },
@@ -96,9 +113,6 @@ const TOOLS = [
 // ── Historique ─────────────────────────────────────────────────────────────
 const MAX_MESSAGES = Number(env.MAX_HISTORY_MESSAGES || 20);
 
-// Tronque l'historique aux derniers MAX_MESSAGES, sans laisser d'orphelin en
-// tête (un message 'tool' ou un assistant avec tool_calls non résolus en
-// première position casse l'API).
 function pruneHistory(messages) {
   let msgs = messages.slice(-MAX_MESSAGES);
   while (msgs.length && (msgs[0].role === "tool" || (msgs[0].role === "assistant" && msgs[0].tool_calls))) {
@@ -107,8 +121,6 @@ function pruneHistory(messages) {
   return msgs;
 }
 
-// Normalise le message assistant renvoyé par la couche compat (tool_calls peut
-// être absent ou null ; content peut être null quand il n'y a que des tool_calls).
 function normalizeAssistant(m) {
   const out = { role: "assistant", content: m.content ?? "" };
   if (Array.isArray(m.tool_calls) && m.tool_calls.length) out.tool_calls = m.tool_calls;
@@ -146,19 +158,52 @@ async function processMessage(externalId, userText) {
   });
 
   const turns = (conv.turns || 0) + 1;
+  const isFirstTurn = turns === 1;
   const messages = pruneHistory(Array.isArray(conv.messages) ? conv.messages : []);
   messages.push({ role: "user", content: userText });
 
-  let escalate = false;
-  let didSearch = false;
-  let nudgedSearch = false;
-  let textReply = "Désolé, je n'ai pas réussi à répondre. Pouvez-vous reformuler ?";
+  // Garde-fous CODE de conformité : si la demande touche un contrat précis / un
+  // acte de gestion / une réclamation, on rappelle au modèle la conduite à tenir
+  // AVANT qu'il réponde (réactif > règle statique lointaine).
+  if (looksLikeIndividualOrEngaging(userText)) {
+    messages.push({
+      role: "user",
+      content:
+        "[Système] La demande semble porter sur un contrat précis ou un acte de gestion. Rappel impératif : tu ne renseignes pas sur un dossier précis, tu n'agis pas, tu ne prends pas position sur la faisabilité ; indique-le et propose, si le client le souhaite, un conseiller.",
+    });
+  } else if (looksLikeComplaint(userText)) {
+    messages.push({
+      role: "user",
+      content:
+        "[Système] Le client exprime du mécontentement. Rappel impératif : empathie sobre, AUCUNE reconnaissance de faute ou d'erreur, AUCUN engagement ni promesse, puis propose rapidement la mise en relation avec un conseiller.",
+    });
+  }
 
-  // 2. BOUCLE LLM (aucune connexion DB tenue ici).
-  for (let step = 0; step < 5; step++) {
+  // RAG DÉTERMINISTE : on récupère en dur les passages KB pertinents pour le
+  // message courant et on les injecte dans le system. Le modèle répond à partir
+  // de là (plus fiable que de lui laisser décider d'appeler un outil de recherche).
+  let kbContext = "";
+  try {
+    const passages = await searchKb({ texteLibre: userText, limit: KB_LIMIT, traceId: externalId });
+    if (passages.length) {
+      kbContext =
+        "\n\nBASE DE CONNAISSANCE GAN PRÉVOYANCE (extraits internes pour fonder ta réponse ; ne jamais les citer ni mentionner de source) :\n" +
+        passages.map((p, i) => `[${i + 1}] ${p.title ? p.title + " — " : ""}${p.content}`).join("\n---\n");
+    }
+  } catch (e) {
+    console.error(`[kb] échec recherche ${externalId}:`, e.message);
+  }
+  const systemContent = SYSTEM + kbContext;
+
+  let escalate = false;
+  let textReply = "Je n'ai pas réussi à traiter votre demande. Pouvez-vous la reformuler ?";
+
+  // BOUCLE LLM (aucune connexion DB tenue ici). Seul l'outil demander_conseiller
+  // peut être appelé (action d'escalade).
+  for (let step = 0; step < 4; step++) {
     const completion = await openai.chat.completions.create({
       model: MODEL,
-      messages: [{ role: "system", content: SYSTEM }, ...messages],
+      messages: [{ role: "system", content: systemContent }, ...messages],
       tools: TOOLS,
       temperature: 0.3,
     });
@@ -171,14 +216,10 @@ async function processMessage(externalId, userText) {
         let result;
         try {
           const args = JSON.parse(tc.function.arguments || "{}");
-          if (tc.function.name === "rechercher_kb") {
-            didSearch = true;
-            const found = await searchKb({ texteLibre: args.requete || userText, limit: KB_LIMIT, traceId: externalId });
-            result = { passages: found };
-          } else if (tc.function.name === "demander_conseiller") {
+          if (tc.function.name === "demander_conseiller") {
             escalate = true;
             console.log(`[escalade] ${externalId} :: ${args.raison || "(sans raison)"}`);
-            result = { ok: true, message: "Mise en relation avec un conseiller déclenchée." };
+            result = { ok: true, message: "Mise en relation déclenchée." };
           } else {
             result = { erreur: `outil inconnu: ${tc.function.name}` };
           }
@@ -187,26 +228,10 @@ async function processMessage(externalId, userText) {
         }
         messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
       }
-      continue; // relance le LLM avec les résultats d'outils
-    }
-
-    // Réponse texte finale.
-    textReply = assistantMsg.content || textReply;
-
-    // Garde-fou réactif : si le modèle répond à une vraie question SANS avoir
-    // cherché ni escaladé, on le pousse à fonder sa réponse une fois (cf.
-    // LEARNINGS : nudge réactif > règle statique). On ne force pas tool_choice
-    // (inutilisable côté Gemini).
-    if (!didSearch && !escalate && !nudgedSearch && looksLikeFactualQuestion(userText)) {
-      nudgedSearch = true;
-      messages.push({
-        role: "user",
-        content:
-          "[Système] Avant de répondre, appelle rechercher_kb pour fonder ta réponse sur la base de connaissance officielle Gan Prévoyance. Si rien de pertinent n'en ressort, propose un conseiller via demander_conseiller.",
-      });
       continue;
     }
 
+    textReply = assistantMsg.content || textReply;
     break;
   }
 
@@ -218,23 +243,30 @@ async function processMessage(externalId, userText) {
     )
   );
 
-  // 4. Construire les sorties.
+  // 4. Construire les sorties. Mention IA EN DUR au 1er tour (conformité).
   const outbound = [];
+  if (isFirstTurn) outbound.push({ type: "text", text: INTRO });
   if (textReply && textReply.trim()) outbound.push({ type: "text", text: textReply.trim() });
   if (escalate && helpNodeEnabled) outbound.push({ type: "help" });
-  if (!outbound.length) outbound.push({ type: "text", text: "Pouvez-vous reformuler votre question ?" });
+  if (!outbound.length) outbound.push({ type: "text", text: "Pouvez-vous préciser votre demande ?" });
 
   return { outbound, turns };
 }
 
-// Heuristique légère : le message ressemble-t-il à une question factuelle qui
-// mérite une recherche KB ? (évite de nudger sur "bonjour", "merci", "ok"...)
-function looksLikeFactualQuestion(text) {
-  const t = String(text || "").trim().toLowerCase();
-  if (t.length < 8) return false;
-  const smalltalk = /^(bonjour|bonsoir|salut|merci|ok|d'accord|au revoir|ça va|coucou)\b/;
-  if (smalltalk.test(t) && t.length < 25) return false;
-  return /\?|comment|quel|quelle|quels|quelles|combien|pourquoi|est-ce|puis-je|peut-on|garantie|contrat|cotisation|sinistre|remboursement|résili|souscri|délai|document|tarif|prix|couver/.test(
+// ── Heuristiques de détection (garde-fous d'entrée) ────────────────────────
+
+// Demande touchant un contrat précis / un acte de gestion / un montant individuel.
+function looksLikeIndividualOrEngaging(text) {
+  const t = String(text || "").toLowerCase();
+  return /\bsold|solder|résili|resili|rachat|rachet|clôtur|cloturer|débloc|debloc|virement|indemnit|mon contrat|mes contrats|mon dossier|mon per\b|mon solde|ma cotisation|mes cotisations|mon sinistre|numéro de contrat|n°|mon adhésion|résilier|annuler mon|modifier mon|mon échéance|mes prestations|mon remboursement\b/.test(
+    t
+  );
+}
+
+// Mécontentement / réclamation.
+function looksLikeComplaint(text) {
+  const t = String(text || "").toLowerCase();
+  return /mécontent|mecontent|insatisf|réclamation|reclamation|scandaleux|inadmissible|déçu|decu|inacceptable|honteux|arnaque|porter plainte|plainte|en colère|colere|lamentable|incompétent|incompetent|nul\b|catastrophe/.test(
     t
   );
 }

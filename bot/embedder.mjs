@@ -11,7 +11,9 @@ let _nextId = 1;
 
 function getWorker() {
   if (_worker) return _worker;
-  _worker = new Worker(new URL("./embedder-worker.mjs", import.meta.url));
+  // execArgv: [] -> le worker n'hérite pas des flags du process parent (ex.
+  // --input-type=module passé à un `node -e`, incompatible avec un worker fichier).
+  _worker = new Worker(new URL("./embedder-worker.mjs", import.meta.url), { execArgv: [] });
   _worker.on("message", (msg) => {
     const p = _pending.get(msg.id);
     if (!p) return;
