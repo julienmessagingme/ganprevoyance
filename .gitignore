@@ -1,0 +1,30 @@
+# Dépendances & builds
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+dist/
+coverage/
+.turbo/
+.tmp-scaffold/
+
+# Env / secrets (repo PUBLIC — ne jamais committer)
+.env
+.env.local
+.env.production
+.env.vercel
+**/.env
+**/.env.local
+**/.env.production
+**/.env.vercel
+
+# Cache modèles transformers (bot)
+**/.cache/
+
+# Éditeur / OS
+.DS_Store
+.vscode/
+.idea/
+.claude/
+*.log

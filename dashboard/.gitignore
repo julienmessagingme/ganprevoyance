@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+dist
+.env
+.env.local
+.env.production
+.env.vercel
+.DS_Store
+*.log
+.vscode
+.idea
+coverage
+.turbo
+.claude
+.tmp-scaffold

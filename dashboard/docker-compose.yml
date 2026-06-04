@@ -1,0 +1,19 @@
+services:
+  ganprev-app:
+    build: .
+    image: ganprev-app:latest
+    container_name: ganprev-app
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3000"
+    networks:
+      - default
+      - npm
+
+networks:
+  # NPM reaches this container via the shared external network. Same pattern
+  # as edh / mieuxassure / educnat / keolis on this VPS.
+  npm:
+    external: true
+    name: mcp-robot_default
