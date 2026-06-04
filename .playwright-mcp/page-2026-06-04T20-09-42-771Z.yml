@@ -1,0 +1,398 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - img "Chargement..." [ref=e7]
+    - generic [ref=e8]:
+      - link "Contactez-nous" [ref=e9] [cursor=pointer]:
+        - /url: /contactez-nous
+        - generic: Contactez-nous
+        - generic [ref=e10]: 
+      - link "Espace client" [ref=e11] [cursor=pointer]:
+        - /url: https://authentification.ganprevoyance.fr/auth/realms/gan-prevoyance/protocol/openid-connect/auth?response_type=code&client_id=ecli-gan-prevoyance-web&scope=openid%20profile%20email%20resource.read&state=yNuY10KKQu7AdX3kJAbtmrV6toCJpdKHGit7bZgd8ak%3D&redirect_uri=http://espaceclient.ganprevoyance.fr/login/oauth2/code/gateway&nonce=CVdP_EVYUlK8_zf4qPf6N8WIOujK3TUjQ3toJEx0NPQ
+        - generic: Espace client
+        - generic [ref=e12]: 
+      - link "Rejoignez-nous" [ref=e13] [cursor=pointer]:
+        - /url: https://offres.groupama-gan-recrute.com/offre-de-emploi/liste-offres.aspx?lcid=1036&facet_Entity=9
+        - generic: Rejoignez-nous
+        - generic [ref=e14]: 
+    - banner [ref=e15]:
+      - navigation [ref=e16]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - 'link "GAN PRÉVOYANCE : Assurances Retraite, Santé, Épargne, Obsèques, Accidents" [ref=e20] [cursor=pointer]':
+              - /url: /
+              - 'img "GAN PRÉVOYANCE : Assurances Retraite, Santé, Épargne, Obsèques, Accidents" [ref=e21]'
+            - text: 
+          - generic [ref=e22]:
+            - generic [ref=e24]:
+              - generic [ref=e26]:
+                - textbox "Barre de recherche textuelle" [ref=e27]:
+                  - /placeholder: RECHERCHER
+                - button "Effectuer la recherche" [ref=e28] [cursor=pointer]:
+                  - generic [ref=e29]: Effectuez votre recherche
+                  - generic [ref=e30]: 
+              - button "Contactez-nous" [ref=e32] [cursor=pointer]:
+                - generic [ref=e33]: 
+                - text: Contactez-nous
+              - button "Espace client" [ref=e35] [cursor=pointer]:
+                - generic [ref=e36]: 
+                - text: Espace client
+            - list [ref=e38]:
+              - listitem [ref=e39]: Je suis...
+              - listitem [ref=e40]:
+                - link "Particulier " [ref=e41] [cursor=pointer]:
+                  - /url: Controls/#
+                - text:               
+              - listitem [ref=e42]:
+                - link "Profession libérale " [ref=e43] [cursor=pointer]:
+                  - /url: Controls/#
+                - text:                
+              - listitem [ref=e44]:
+                - link "Artisan commerçant " [ref=e45] [cursor=pointer]:
+                  - /url: Controls/#
+                - text:                
+              - listitem [ref=e46]:
+                - button "Dirigeant d'entreprise " [ref=e47] [cursor=pointer]
+              - listitem [ref=e48]:
+                - button "Candidat (H/F) " [ref=e49] [cursor=pointer]
+    - generic [ref=e50]:
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: Je profite d’une prise en charge sur-mesure avec la complémentaire santé
+            - img "Complémentaire Santé" [ref=e55]
+          - generic [ref=e57]:
+            - paragraph [ref=e58]:
+              - emphasis [ref=e59]: Et si nous en parlions ensemble ?
+            - paragraph [ref=e60]:
+              - link "Je contacte un conseiller" [ref=e61] [cursor=pointer]:
+                - /url: "#contact"
+                - text: Je contacte un conseiller
+                - generic [ref=e62]: 
+        - generic [ref=e63]:
+          - heading "Complémentaire Santé" [level=1] [ref=e64]
+          - paragraph [ref=e66]: Ajustée à vos préoccupations et vos besoins, cette complémentaire santé a pour objectif de maintenir une couverture optimale de vos dépenses de santé, pour vous et votre famille.
+          - generic [ref=e68]:
+            - generic [ref=e70]: 
+            - list [ref=e71]:
+              - listitem [ref=e72]: "Des remboursements renforcés et des tarifs négociés : dans notre réseau partenaire Sévéane, notamment auprès de dentistes, opticiens et ostéopathes."
+              - listitem [ref=e73]: "Remboursement d’actes non pris en charge par la Sécurité Sociale : médecine douce, lentilles, implants dentaires..."
+              - listitem [ref=e74]: Des services d’assistance à domicile pour vous soulager en cas d’arrêt ou d’hospitalisation.
+              - listitem [ref=e75]: Téléconsultation à distance, 2ème avis médical.
+              - listitem [ref=e76]: Gratuité de cotisation pour le 3e enfant et les suivants.
+      - generic [ref=e79]:
+        - heading "Caractéristiques" [level=2] [ref=e80]
+        - paragraph [ref=e81]: Gan Prévoyance Santé vous assure une prise en charge optimale avec des niveaux de garanties adaptés à vos besoins et à votre budget. Les services d'assistance et de bien-être viennent compléter votre parcours santé et celui de la famille.
+        - paragraph [ref=e82]
+        - generic [ref=e85]: GARANTIEs ET OPTIONS
+        - generic [ref=e87]:
+          - list [ref=e90]:
+            - listitem [ref=e91]: "Une prise en charge de l’hospitalisation dès le 1er jour et sans limitation de durée (hors psychiatrie) : chambre particulière, lit et repas d’accompagnant..."
+            - listitem [ref=e92]: "Le remboursement d’actes non pris en charge par la Sécurité Sociale : lentilles, opération des défauts visuels, implants dentaires, parodontologie…"
+          - list [ref=e94]:
+            - listitem [ref=e95]:  Un service « devis » en dentaire et optique pour connaître à l’avance le montant de vos remboursements.
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - generic [ref=e100]: LES GARANTIES D'ASSISTANCE
+          - paragraph [ref=e101]: "Vous bénéficiez de garanties d’assistance et de conseils adaptés :"
+          - list [ref=e102]:
+            - listitem [ref=e103]:
+              - text: 
+              - strong [ref=e104]: "Information santé :"
+              - text: adresse d’un professionnel de santé de votre région, recherche d’informations sur des thèmes précis (la nutrition, le stress, l’alcool, les accidents domestiques, la prévention contre le bruit, …) ou sur l’actualité de la santé (pollution, nouveaux médicaments, qualité de l’eau dans votre région, …).
+            - listitem [ref=e105]:
+              - text: 
+              - strong [ref=e106]: "Services d’accompagnement :"
+              - text: analyse de votre situation, information sur vos droits à prestation, évaluation des dépenses à engager, …
+            - listitem [ref=e107]:
+              - text: 
+              - strong [ref=e108]: "Assistance à domicile :"
+              - text: aide-ménagère, téléassistance pour les plus de 60 ans, garde de vos enfants et soutien pédagogique, prise en charge des frais de livraison à domicile de repas ou de soins à vos animaux, …
+            - listitem [ref=e109]:
+              - text: 
+              - strong [ref=e110]: "Assistance en déplacement :"
+              - text: rapatriement, retour d’un proche, frais de recherche en montagne ou en mer, envoi de médicaments, avance de fonds, …
+        - generic [ref=e114]:
+          - generic [ref=e115]: "Téléchargez nos documents d'information :"
+          - paragraph [ref=e117]:
+            - link "Document d'informations - Gan Prévoyance Santé PRO" [ref=e118] [cursor=pointer]:
+              - /url: /complementaire-sante-professionnel/2-1/document-d-informations-gan-prevoyance-sante-pro.pdf?date=20231127095904
+              - generic [ref=e119]: 
+              - text: Document d'informations - Gan Prévoyance Santé PRO
+            - link "Document d'informations - Gan Prévoyance Santé spécial Senior" [ref=e120] [cursor=pointer]:
+              - /url: /complementaire-sante-professionnel/2-2/document-d-informations-gan-prevoyance-sante-special-senior.pdf?date=20231127095904
+              - generic [ref=e121]: 
+              - text: Document d'informations - Gan Prévoyance Santé spécial Senior
+            - link "Exemples de remboursements 100% santé" [ref=e122] [cursor=pointer]:
+              - /url: /complementaire-sante-professionnel/2-3/exemples-de-remboursements-100-sante.pdf?date=20260112144253
+              - generic [ref=e123]: 
+              - text: Exemples de remboursements 100% santé
+      - generic [ref=e124]:
+        - generic [ref=e125]:
+          - generic [ref=e126]: Des services complémentaires gratuits pour vous aider vous et vos proches
+          - generic [ref=e128]:
+            - paragraph [ref=e129]:
+              - img "Prévoyance" [ref=e130]
+            - generic [ref=e131]: MédecinDirect
+            - generic [ref=e132]:
+              - paragraph [ref=e133]: Consultez un médecin généraliste ou spécialiste par écrit, téléphone ou vidéo, 24h/24 et 7j/7.
+              - paragraph [ref=e134]:
+                - link "En savoir plus" [ref=e135] [cursor=pointer]:
+                  - /url: https://www.medecindirect.fr/?utm_source=partenaire_GGVIE_INDIVIDUEL_cible_B%C3%A9n%C3%A9ficiaires_age_Tous&utm_medium=type_com_e-mail_Partenaire_CTA_Voir_le_site&utm_campaign=2021-06-28_campagne_vacances
+        - img "Des services complémentaires gratuits pour vous aider vous et vos proches" [ref=e138]
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - generic [ref=e141]: Les experts Gan Prévoyance vous accompagnent...
+          - generic [ref=e142]: Votre projet en 3 étapes...
+        - generic [ref=e144]:
+          - generic [ref=e145]:
+            - generic [ref=e147]:
+              - generic [ref=e148]: "1"
+              - text: Nous nous rencontrons
+            - paragraph [ref=e149]:
+              - generic [ref=e150]:
+                - strong [ref=e151]: Lors d'un rendez-vous,
+                - strong [ref=e152]: chez vous
+                - text: ou
+                - strong [ref=e153]: à distance
+          - paragraph [ref=e154]: 
+          - generic [ref=e155]:
+            - generic [ref=e157]:
+              - generic [ref=e158]: "2"
+              - text: Ensemble
+            - paragraph [ref=e159]:
+              - strong [ref=e161]:
+                - text: nous faisons
+                - text: le point
+          - paragraph [ref=e162]: 
+          - generic [ref=e163]:
+            - generic [ref=e165]:
+              - generic [ref=e166]: "3"
+              - strong [ref=e167]: Votre expert vous propose
+            - paragraph [ref=e168]:
+              - strong [ref=e170]:
+                - text: la solution
+                - text: la mieux adaptée
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]: 
+            - text: Contactez-nous
+          - generic [ref=e176]:
+            - text: Notre offre
+            - strong [ref=e177]: Santé
+            - text: vous intéresse
+            - text: et vous souhaitez en savoir plus ?
+            - text: Nos conseillers sont à votre disposition pour vous guider.
+        - generic [ref=e181]:
+          - radio "Oui"
+          - radio "Non"
+          - radio "Gan Prévoyance"
+          - radio "Gan Assurances"
+          - radio "Gan Patrimoine"
+          - generic [ref=e183]: Réponse sous 48h ouvrées
+          - generic [ref=e184]:
+            - generic [ref=e185]:
+              - group "Êtes-vous déjà client ?" [ref=e186]:
+                - generic [ref=e187]: Êtes-vous déjà client ?
+                - generic [ref=e188]:
+                  - generic [ref=e189]: Oui
+                  - generic [ref=e190]: Non
+              - group "Êtes-vous client :" [ref=e191]:
+                - generic [ref=e192]: "Êtes-vous client :"
+                - generic [ref=e193]:
+                  - generic [ref=e194]: Gan Prévoyance
+                  - generic [ref=e195]: Gan Assurances
+                  - generic [ref=e196]: Gan Patrimoine
+              - paragraph [ref=e197]:
+                - text: Quel dommage ! Vous n'êtes pas l'un de nos clients.
+                - text: Pour joindre Gan Assurances,
+                - link "c'est par ici !" [ref=e198] [cursor=pointer]:
+                  - /url: https://www.gan.fr/
+                  - strong [ref=e199]: c'est par ici !
+              - paragraph [ref=e200]:
+                - text: Quel dommage ! Vous n'êtes pas l'un de nos clients.
+                - text: Pour joindre Gan Patrimoine,
+                - link "c'est par ici !" [ref=e201] [cursor=pointer]:
+                  - /url: https://www.ganpatrimoine.fr/
+                  - strong [ref=e202]: c'est par ici !
+            - generic [ref=e203]:
+              - generic [ref=e204]: Que peut-on faire pour vous ? *
+              - combobox "Que peut-on faire pour vous ? *" [ref=e206]:
+                - option "- Votre choix..." [disabled] [selected]
+                - option "Demande de rendez-vous"
+                - option "Gestion du contrat"
+                - option "Réalisation d'un bilan personnalisé"
+                - option "Réclamation"
+                - option "Autre"
+            - generic [ref=e207]:
+              - generic [ref=e208]: Quel est le motif de votre contact ? *
+              - combobox "Quel est le motif de votre contact ? *" [ref=e210]:
+                - option "- Votre choix..." [disabled] [selected]
+                - option "Demander une visio-conférence ou rencontrer un conseiller"
+                - option "Être rappelé(e) par notre service client"
+                - option "Obtenir des informations sur une offre"
+                - option "Autre demande"
+          - generic [ref=e211]:
+            - group "Civilité *" [ref=e212]:
+              - generic [ref=e213]: Civilité *
+              - generic [ref=e215]:
+                - generic [ref=e216]:
+                  - radio "Madame" [ref=e217]
+                  - generic [ref=e218]: Madame
+                - generic [ref=e219]:
+                  - radio "Monsieur" [ref=e220]
+                  - generic [ref=e221]: Monsieur
+            - generic [ref=e222]:
+              - generic [ref=e223]: Votre nom *
+              - textbox "Votre nom *" [ref=e224]:
+                - /placeholder: Indiquez votre nom
+            - generic [ref=e225]:
+              - generic [ref=e226]: Votre prénom *
+              - textbox "Votre prénom *" [ref=e227]:
+                - /placeholder: Indiquez votre prénom
+            - generic [ref=e228]:
+              - generic [ref=e229]: Votre e-mail *
+              - textbox "Votre e-mail *" [ref=e230]:
+                - /placeholder: Indiquez votre adresse e-mail
+            - generic [ref=e231]:
+              - generic [ref=e232]: Votre numéro de téléphone *
+              - textbox "Votre numéro de téléphone *" [ref=e233]:
+                - /placeholder: Indiquez votre numéro de téléphone
+            - generic [ref=e234]:
+              - generic [ref=e235]: "Vous pouvez nous laisser un message :"
+              - textbox "Vous pouvez nous laisser un message :" [ref=e236]:
+                - /placeholder: Saisissez votre message
+            - group [ref=e237]:
+              - generic [ref=e239]:
+                - text: Les données personnelles recueillies sont exploitées par Gan Prévoyance, responsable de traitement, pour traiter votre demande. Concernant vos données personnelles, vous pouvez consulter notre politique de protection des données, retrouver les informations relatives aux traitements mis en œuvre et aux modalités d'exercice de vos droits sur notre site internet ganprevoyance.fr, rubrique «
+                - link "Données Personnelles" [ref=e240] [cursor=pointer]:
+                  - /url: /donnees-personnelles
+                - text: ».
+            - button "Envoyer votre demande" [ref=e245] [cursor=pointer]
+            - generic [ref=e246]: "* Champs obligatoires"
+    - generic [ref=e247]:
+      - generic [ref=e248]:
+        - generic [ref=e250]:
+          - generic [ref=e251]:
+            - generic [ref=e252]: Nos offres
+            - list [ref=e253]:
+              - listitem [ref=e254]:
+                - text: 
+                - 'link "Prévoyance : me protéger, ma famille et moi" [ref=e255] [cursor=pointer]':
+                  - /url: /prevoyance-particulier
+              - listitem [ref=e256]:
+                - text: 
+                - 'link "Retraite : bien préparer ma retraite" [ref=e257] [cursor=pointer]':
+                  - /url: /retraite-particulier
+              - listitem [ref=e258]:
+                - text: 
+                - 'link "Santé : optimiser mes remboursements santé" [ref=e259] [cursor=pointer]':
+                  - /url: /sante-particulier
+              - listitem [ref=e260]:
+                - text: 
+                - 'link "Épargne : sécuriser et dynamiser mon épargne" [ref=e261] [cursor=pointer]':
+                  - /url: /epargne-particulier
+          - generic [ref=e262]:
+            - generic [ref=e263]: Gan prévoyance
+            - list [ref=e264]:
+              - listitem [ref=e265]:
+                - text: 
+                - link "Qui sommes-nous ?" [ref=e266] [cursor=pointer]:
+                  - /url: /qui-sommes-nous
+              - listitem [ref=e267]:
+                - text: 
+                - link "Nos actualités" [ref=e268] [cursor=pointer]:
+                  - /url: /actualites
+              - listitem [ref=e269]:
+                - text: 
+                - link "Candidat / Postuler ?" [ref=e270] [cursor=pointer]:
+                  - /url: https://www.groupama-gan-recrute.com/nos-offres/?organisation_name=Gan%20Prévoyance&fromLanding=%22true%22
+              - listitem [ref=e271]:
+                - text: 
+                - link "Espace client" [ref=e272] [cursor=pointer]:
+                  - /url: https://authentification.ganprevoyance.fr/auth/realms/gan-prevoyance/protocol/openid-connect/auth?response_type=code&client_id=ecli-gan-prevoyance-web&scope=openid%20profile%20email%20resource.read&state=yNuY10KKQu7AdX3kJAbtmrV6toCJpdKHGit7bZgd8ak%3D&redirect_uri=http://espaceclient.ganprevoyance.fr/login/oauth2/code/gateway&nonce=CVdP_EVYUlK8_zf4qPf6N8WIOujK3TUjQ3toJEx0NPQ
+              - listitem [ref=e273]:
+                - text: 
+                - link "Contactez-nous" [ref=e274] [cursor=pointer]:
+                  - /url: /contactez-nous
+              - listitem [ref=e275]:
+                - link "Notre page Facebook" [ref=e276] [cursor=pointer]:
+                  - /url: https://fr-fr.facebook.com/page.gan.prevoyance/
+                  - generic [ref=e277]: 
+                - link "Notre page Linkedin" [ref=e278] [cursor=pointer]:
+                  - /url: https://fr.linkedin.com/company/gan-prévoyance
+                  - generic [ref=e279]: 
+                  - generic [ref=e280]: Notre page Linkedin
+                - link "Notre page instagram" [ref=e281] [cursor=pointer]:
+                  - /url: https://www.instagram.com/ganprevoyance_/
+                  - generic [ref=e282]: 
+          - generic [ref=e284]:
+            - img "Contactez-nous" [ref=e286]
+            - generic [ref=e287]:
+              - paragraph [ref=e288]:
+                - generic [ref=e289]:
+                  - text: "Joindre le service client de Gan Prévoyance :"
+                  - link "09 69 32 35 05" [ref=e290] [cursor=pointer]:
+                    - /url: tel:0033969323505
+                - text: "- Choix 4 (appel non surtaxé) -"
+              - paragraph [ref=e291]: Du lundi au vendredi de 8h30 à 18h
+        - img "Gan Prévoyance" [ref=e293]
+      - list [ref=e296]:
+        - listitem [ref=e297]:
+          - link "Mentions légales" [ref=e298] [cursor=pointer]:
+            - /url: /mentions-legales
+        - listitem [ref=e299]: "|"
+        - listitem [ref=e300]:
+          - link "Données personnelles" [ref=e301] [cursor=pointer]:
+            - /url: /donnees-personnelles
+        - listitem [ref=e302]: "|"
+        - listitem [ref=e303]:
+          - link "Cookies" [ref=e304] [cursor=pointer]:
+            - /url: /cookies
+        - listitem [ref=e305]: "|"
+        - listitem [ref=e306]:
+          - link "Gérer mes cookies" [ref=e307] [cursor=pointer]:
+            - /url: "javascript: void(0);"
+        - listitem [ref=e308]: "|"
+        - listitem [ref=e309]:
+          - link "Réclamations" [ref=e310] [cursor=pointer]:
+            - /url: /reclamations
+        - listitem [ref=e311]: "|"
+        - listitem [ref=e312]:
+          - link "Contactez-nous" [ref=e313] [cursor=pointer]:
+            - /url: /contactez-nous
+        - listitem [ref=e314]: "|"
+        - listitem [ref=e315]:
+          - link "Plan du site" [ref=e316] [cursor=pointer]:
+            - /url: /plan-du-site
+      - generic [ref=e319]:
+        - emphasis [ref=e320]: Gan Prévoyance, une marque du groupe Groupama, assureur créateur de confiance
+        - img "Groupe Groupama" [ref=e321]
+  - generic "Revenir en haut" [ref=e322] [cursor=pointer]:
+    - img "Retourner en haut de la page" [ref=e323]
+  - region "Bannière de cookies" [ref=e324]:
+    - dialog "<p>En savoir plus sur les cookies ou paramétrer vos cookies</p>" [ref=e325]:
+      - generic [ref=e327]:
+        - generic [ref=e329]:
+          - heading "En savoir plus sur les cookies ou paramétrer vos cookies" [level=2] [ref=e330]:
+            - paragraph [ref=e331]: En savoir plus sur les cookies ou paramétrer vos cookies
+          - generic [ref=e332]:
+            - paragraph [ref=e333]: Gan Prévoyance et ses partenaires utilisent des traceurs et cookies afin de sécuriser et faire fonctionner le site internet, de mesurer son audience, de personnaliser son contenu, de partager du contenu sur les réseaux sociaux, d'afficher des pictogrammes sur ses pages ou encore de permettre la lecture de vidéos.
+            - paragraph
+            - paragraph
+            - paragraph [ref=e334]: Vous avez la possibilité de refuser le dépôt de tout ou partie des cookies et traceurs en appuyant le bouton « Tout refuser » ou «Continuer sans accepter» ou « Gérer vos cookies». Si vous n’acceptez pas certains cookies, certaines fonctionnalités du site pourraient être réduites. Vous pouvez revenir sur cette interface, à tout moment, et modifier vos préférences.
+            - paragraph
+            - paragraph
+            - paragraph [ref=e335]: En cliquant sur les différentes catégories de cookies et traceurs, vous obtenez plus de détails sur chacune d'entre elles. Vous avez la possibilité d’accepter ou de refuser l’ensemble des cookies appartenant à l’une l’autre de ces catégories.
+            - paragraph
+            - link "Pour en savoir plus sur la protection de votre vie privée, s'ouvre dans un nouvel onglet" [ref=e336] [cursor=pointer]:
+              - /url: https://www.ganprevoyance.fr/donnees-personnelles
+              - text: Données personnelles
+            - link "Mentions légales, s'ouvre dans un nouvel onglet" [ref=e337] [cursor=pointer]:
+              - /url: https://www.ganprevoyance.fr/mentions-legales
+              - text: Mentions légales
+        - generic [ref=e339]:
+          - button "Gérer mes cookies, Ouvre la boîte de dialogue du centre de préférences" [ref=e340] [cursor=pointer]: Gérer mes cookies
+          - button "Tout refuser" [ref=e341] [cursor=pointer]
+          - button "Autoriser tous les cookies" [ref=e342] [cursor=pointer]
+      - button "Continuer sans accepter" [ref=e344] [cursor=pointer]

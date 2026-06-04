@@ -10,7 +10,10 @@ const BASE = process.env.SCRAPE_BASE || "https://www.ganprevoyance.fr";
 const ORIGIN = new URL(BASE).origin;
 const MAX_PAGES = Number(process.env.SCRAPE_MAX_PAGES || 400);
 const CHUNK_CHARS = Number(process.env.SCRAPE_CHUNK_CHARS || 900);
-const UA = "GanPrevoyanceBot/1.0 (+https://ganprevoyance.messagingme.app)";
+// ganprevoyance.fr ne sert le contenu SSR qu'à un vrai UA navigateur (anti-bot).
+// Un UA générique renvoie une coquille vide -> on se présente comme Chrome.
+const UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -81,7 +84,9 @@ async function crawl() {
 // Extrait titre + texte principal d'une page. Supprime nav/footer/scripts.
 function extract(html) {
   const $ = cheerio.load(html);
-  $("script, style, noscript, nav, header, footer, form, svg, iframe, .cookie, #cookie, [role=navigation]").remove();
+  // ⚠️ NE PAS retirer <form> : ganprevoyance.fr est en ASP.NET WebForms, toute la
+  // page est dans un unique <form runat="server"> -> le retirer vide la page.
+  $("script, style, noscript, nav, header, footer, svg, iframe, .cookie, #cookie, [role=navigation]").remove();
   const title = ($("h1").first().text() || $("title").text() || "").replace(/\s+/g, " ").trim();
   // Conteneur principal probable, sinon body.
   const main = $("main").length ? $("main") : $("article").length ? $("article") : $("body");
