@@ -22,6 +22,10 @@ coverage/
 # Cache modèles transformers (bot)
 **/.cache/
 
+# Artefacts Playwright MCP
+.playwright-mcp/
+**/.playwright-mcp/
+
 # Éditeur / OS
 .DS_Store
 .vscode/
