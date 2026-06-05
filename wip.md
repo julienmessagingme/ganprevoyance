@@ -42,18 +42,20 @@ Travail en cours. Quand une entrée est terminée → `features.md` ou supprimé
       + node déclenché) sur un vrai abonné.
 - [ ] Enrichir les cas de tests (gestion, délais, prestations, SRC, réclamations).
 
-## KB unifiée — onglet "Base de connaissance" alimente le bot (FAIT)
-- [x] L'onglet du dashboard pousse maintenant vers la **KB du bot** (pgvector) via
-      l'API `/kb/upsert` `/kb/delete` du bot (auth secret). Q&R, texte libre, import
-      Excel, édition et suppression sont câblés (`bot-kb.ts` + accroches dans les routes).
-- [x] Testé E2E : créer une Q&R dans l'onglet → atterrit dans `kb_chunks` (embeddé) ;
-      supprimer → retiré du bot. Conteneur dashboard atteint le bot via `172.18.0.1:8130`.
-- [ ] **Fichiers PDF/Word uploadés dans l'onglet** : pas encore poussés au bot (leur
-      contenu n'est parsé que par OpenAI). À ajouter (extraction texte côté dashboard).
-- [ ] **OpenAI vector store `vs_6a21...`** : encore alimenté en double-écriture (résidu
-      du module cloné de Neoma, jamais lu par le bot). À retirer complètement quand on
-      voudra zéro OpenAI (nécessite de sortir OpenAI des routes knowledge + gérer le
-      statut + les uploads fichiers).
+## Onglet "Base de connaissance" = gestionnaire de la KB du bot (FAIT, OpenAI sorti)
+- [x] L'onglet **affiche et édite la VRAIE KB du bot** (`kb_chunks` pgvector) : site
+      scrapé (167 pages), documents (PDF), entrées manuelles. Source unique.
+- [x] Bot : endpoints `/kb/list`, `/kb/get`, `/kb/upsert`, `/kb/delete` (par url ou
+      sourceId). Dashboard : `bot-kb.ts` + route `/api/knowledge/kb` + nouveau
+      `knowledge-client.tsx` (liste, voir/éditer, supprimer, ajouter).
+- [x] **OpenAI entièrement retiré** : module `openai-kb.ts`, `lib/knowledge/`, anciennes
+      routes `api/knowledge/*` supprimés ; vector store `vs_6a21...` supprimé côté OpenAI.
+- [x] Testé E2E via le dashboard : liste = 168 sources (167 site + 1 doc) ; créer →
+      atterrit dans `kb_chunks` embeddé ; supprimer → retiré.
+- [ ] Fichiers PDF/Word uploadés DIRECTEMENT dans l'onglet : l'ajout passe par le champ
+      texte (copier-coller) ; un vrai upload de fichier avec extraction auto reste à
+      ajouter si besoin (aujourd'hui : `npm run ingest-docx` côté bot pour les .docx).
+- Vars `OPENAI_*` encore présentes dans les .env mais plus utilisées (nettoyage cosmétique possible).
 
 ## Points ouverts
 - Re-scrape périodique du site à prévoir (cron) pour garder la KB du bot à jour.
