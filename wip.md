@@ -24,14 +24,22 @@ Travail en cours. Quand une entrée est terminée → `features.md` ou supprimé
       → /health OK, smoke test webhook public OK (agent répond, RAG rows=5). Token MM 997/1000.
 - [x] Le flow MessagingMe (291825) **est déjà branché** sur le webhook (vrai user vu).
 
-### ⚠️ Reste pour le bot
-- [ ] **Node d'escalade conseiller** (`_gan_agent_talk`) : Julien doit fournir le
-      `node_ns` → le mettre dans `bot/.env` `MM_HELP_NODE_NS` + `pm2 restart`. Tant
-      que ce n'est pas fait, l'agent ANNONCE la mise en relation mais ne déclenche
-      aucun transfert réel.
-- [ ] **Validation conformité** du nouveau discours avant diffusion large (Marguerite
-      avait demandé de couper l'ancien). Le nouveau respecte les exigences (orienter
-      sans décider, mention IA, mécontentement cadré), à faire valider.
+### Escalade conseiller — CÂBLÉE
+- [x] Node de transfert `MM_HELP_NODE_NS=f266213n450294737` (confirme la transmission au conseiller).
+- [x] À l'escalade, l'agent génère un **résumé factuel de la conversation** et l'écrit
+      dans le user field `MM_SUMMARY_FIELD_NS=f266213v13539241` ("reponses client IA")
+      via `PUT set-user-field` (par var_ns), puis déclenche le node. Pas de double message.
+- [x] FAQ "Relevé de situation" ajoutée à la KB (6 chunks). Ingestion docx réutilisable
+      (`npm run ingest-docx -- "<chemin.docx>"` puis `npm run embed`).
+
+### ⛔ BOT MUET (NO_SEND=1) — en attente de feu vert
+- Le bot traite mais **ne renvoie rien** (choix B de Julien), le temps de la
+  **validation conformité** du nouveau discours. Pour ouvrir : sur le VPS, mettre
+  `NO_SEND=0` dans `bot/.env` + `pm2 restart ganprevoyance --update-env`.
+- Clé Gemini `AQ.…` fournie par Julien : fonctionne (le cerveau disait à tort qu'elle
+  expirait, cf. LEARNINGS 2026-06-05). On ne swappe que si elle 401 à l'usage.
+- [ ] À faire après ouverture : tester une vraie escalade (résumé écrit dans le field
+      + node déclenché) sur un vrai abonné.
 - [ ] Enrichir les cas de tests (gestion, délais, prestations, SRC, réclamations).
 
 ## Points ouverts
