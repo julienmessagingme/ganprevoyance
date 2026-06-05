@@ -4,22 +4,23 @@ Backlog (idées validées non commencées, bugs connus, améliorations). Ce qui 
 en cours est dans `wip.md`.
 
 ## Priorité
-- Remplacer le logo placeholder par le vrai logo Gan Prévoyance (dashboard).
-- Valider la qualité du scraping ganprevoyance.fr (couverture FAQ + produits) et
-  affiner les sélecteurs / le découpage en chunks après le 1er run.
-- Brancher le webhook MessagingMe (291825) et tester une vraie conversation WhatsApp.
+- Faire valider le discours du bot par la conformité avant communication large.
+- Upload direct de fichiers PDF/Word dans l'onglet Base de connaissance (extraction
+  texte côté dashboard + push vers la KB du bot). Aujourd'hui : copier-coller le texte,
+  ou `npm run ingest-docx` côté bot pour les .docx.
 
 ## Améliorations
-- Unifier les deux bases de connaissance (le bot pourrait lire la KB gérée depuis
-  le module dashboard plutôt qu'un scraping séparé) → autonomie client.
-- Node MessagingMe d'escalade vers conseiller (carte web-callback) → `MM_HELP_NODE_NS`.
+- Re-scrape périodique automatique de ganprevoyance.fr (cron) pour garder la KB du bot à jour.
 - Recherche hybride bot (trigram + embedding) si des questions à mots-clés/typos
   ressortent mal en pur sémantique.
-- Page "santé" du sync dans le dashboard (dernier run, volumétrie par event).
+- Page "santé" du sync custom events dans le dashboard (dernier run, volumétrie par event).
 - Throttle/handoff bot : configurer `MM_OVERFLOW_NODE_NS` si le budget MM se tend.
+- Cleanup : retirer les vars `OPENAI_*` des `.env` (plus utilisées, module OpenAI retiré).
 
 ## Connu / à surveiller
 - Sync custom events : Neoma (et EDH) ont encore le bug de pagination descendante
   (LEARNINGS 2026-06-02) — corrigé ICI seulement. À reporter dans leurs repos.
-- Connexion Postgres directe IPv6 sur le nouveau projet Supabase : si le VPS ou la
-  machine locale ne l'a pas, basculer sur le pooler (overrides `SUPABASE_DB_*`).
+- Escalade : node/field en flow `f266213` ; surveiller le cas d'un contact d'un autre
+  flow (`f265919`) → scope MM des user-fields.
+- Connexion bot DB : direct IPv6 KO, on passe par le pooler `aws-1-eu-central-1`
+  (overrides `SUPABASE_DB_HOST`/`_USER`/`_PORT`).

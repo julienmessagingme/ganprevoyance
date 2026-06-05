@@ -15,20 +15,26 @@ Accès sur `https://ganprevoyance.messagingme.app/` (login email + mot de passe)
   export PDF. Statut : live.
 - **Campagnes** — regrouper des events/URLs sous une campagne nommée (rôles
   lancement / corps / échec, coût Meta WhatsApp). Statut : live.
-- **Base de connaissance** — alimenter le vector store OpenAI (PDF, texte, Q/R,
-  Excel), organisé par thèmes. Statut : live (vector store Gan Prévoyance à créer).
-- **Admin** — inviter / désactiver des utilisateurs. Statut : live.
+- **Base de connaissance** (page d'accueil de l'app) — voir, **rechercher** (plein texte),
+  éditer et supprimer tout le contenu utilisé par le bot : pages du site scrapé, documents
+  importés, entrées manuelles (Q/R, texte). Ce qui est ici alimente directement les
+  réponses du bot. Statut : live.
+- **Analyse de conversations** — écran de découverte de ConvAnalyzer (présentation + vidéo
+  démo) ; accès complet sur demande à l'administrateur. Statut : teaser.
+- **Admin** — inviter / désactiver des utilisateurs, gérer les domaines accessibles.
+  Statut : live.
 
 ## Bot WhatsApp (assurance)
 
-Répond automatiquement aux questions des clients/prospects sur WhatsApp via
-l'agent IA Gemini 2.5, à partir de la base de connaissance Gan Prévoyance.
+Répond automatiquement aux questions des clients/prospects sur WhatsApp via l'agent IA
+Gemini 2.5, à partir de la base de connaissance Gan Prévoyance. **En production.**
 
-- **Réponses fondées sur la base de connaissance** — l'agent cherche dans le
-  contenu officiel (FAQ + pages produits/garanties scrapées de ganprevoyance.fr)
-  et répond en s'appuyant uniquement dessus. Statut : en cours de mise en place.
-- **Garde-fou assurance** — n'invente jamais montants, garanties, délais ; pour
-  tout cas personnel (contrat, sinistre, données) ou incertain, propose la mise en
-  relation avec un conseiller. Statut : intégré.
-- **Escalade conseiller** — bascule vers un conseiller humain à la demande ou quand
-  la question dépasse la base de connaissance. Statut : intégré (node MM à brancher).
+- **Mention IA** — au 1er message, le bot annonce clairement qu'il est une IA (vocation
+  informative, ne remplace pas un conseiller). Statut : live.
+- **Réponses fondées sur la base de connaissance** — répond à partir du contenu officiel
+  (site + documents) géré depuis l'onglet Base de connaissance. Statut : live.
+- **Garde-fou assurance** — oriente sans décider, n'invente jamais montants/garanties/
+  délais ; pour tout cas personnel (contrat, sinistre) ou réclamation, propose un
+  conseiller (sans reconnaître de faute ni s'engager). Statut : live.
+- **Escalade conseiller** — sur demande du client, met en relation avec un conseiller
+  (node MM) et transmet un **résumé de la conversation** au conseiller. Statut : live.
