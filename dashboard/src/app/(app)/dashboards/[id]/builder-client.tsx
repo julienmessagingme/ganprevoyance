@@ -648,27 +648,14 @@ export function BuilderClient({
 
   const stepIds = dashboard.steps.map((s) => s.id);
 
-  // Palette filtrée pour l'affichage uniquement (sidebar + AddRefMenu).
-  // La palette complète `palette` reste utilisée par `resolveRef` et
-  // `paletteItemFor` pour résoudre les refs déjà présentes dans les
-  // étapes — sinon un event "Etape 1" non porteur de texte serait
-  // marqué "(indisponible)" dans un pie chart juste parce que la palette
-  // d'affichage est filtrée.
+  // Palette filtrée pour l'affichage (sidebar + AddRefMenu). La palette complète
+  // `palette` reste utilisée par `resolveRef`/`paletteItemFor` pour résoudre les
+  // refs déjà présentes. Seul filtre d'affichage : la campagne courante.
   //
-  // 2 filtres successifs appliqués SEULEMENT à `displayedPalette` :
-  //   1. Mode pie → garder uniquement les events porteurs (text_label
-  //      non vide) ; URLs exclues (pas de valeur portée côté redirect).
-  //   2. Filtre campagne (campaignKeySet) → restreindre aux briques de
-  //      la campagne courante.
+  // En mode pie, on montre TOUS les custom events (chaque part = un event, la
+  // tranche = son nombre d'occurrences). On ne masque plus les events compteurs :
+  // l'ancien filtre "porteurs de texte" (hérité d'EDH) les cachait à tort.
   let displayedPalette: Palette = palette;
-  if (dashboard.type === "pie") {
-    displayedPalette = {
-      mmEvents: displayedPalette.mmEvents.filter(
-        (p) => p.has_text_value === true
-      ),
-      redirectEvents: [],
-    };
-  }
   if (campaignKeySet) {
     displayedPalette = {
       mmEvents: displayedPalette.mmEvents.filter((p) =>
