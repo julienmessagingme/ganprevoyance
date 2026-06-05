@@ -1,10 +1,7 @@
-// Pousse le contenu de l'onglet "Base de connaissance" vers la KB du bot
-// (pgvector, projet Supabase dédié), via l'API d'ingestion du bot
-// (server.mjs /kb/upsert et /kb/delete). C'est ce qui fait que ce que Julien
-// ajoute dans l'onglet alimente VRAIMENT les réponses du bot WhatsApp.
-//
-// Best-effort : si le bot est indisponible, on log et on n'échoue PAS l'action
-// côté dashboard (l'item reste en DB ; une ré-édition le re-poussera).
+// Client de l'API base de connaissance du bot (server.mjs /kb/*). La KB du bot
+// (table kb_chunks pgvector, projet Supabase dédié) est la source UNIQUE : le
+// site scrapé, les documents et les entrées manuelles y vivent ensemble. L'onglet
+// "Base de connaissance" du dashboard lit/écrit cette KB via cette couche.
 //
 // Env : BOT_KB_URL (ex. http://172.18.0.1:8130) + BOT_KB_SECRET (= WEBHOOK_SECRET du bot).
 
@@ -15,52 +12,73 @@ export function botKbEnabled(): boolean {
   return Boolean(BOT_KB_URL && BOT_KB_SECRET);
 }
 
-export async function pushKbItem(
-  sourceId: string,
-  opts: { title?: string | null; kind?: string; content: string }
-): Promise<boolean> {
-  if (!botKbEnabled()) return false;
-  if (!opts.content || !opts.content.trim()) return false;
-  try {
-    const r = await fetch(`${BOT_KB_URL}/kb/upsert`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Webhook-Secret": BOT_KB_SECRET as string },
-      body: JSON.stringify({
-        sourceId,
-        title: opts.title ?? null,
-        kind: opts.kind ?? "kb",
-        content: opts.content,
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!r.ok) {
-      console.warn(`[bot-kb] upsert ${sourceId} HTTP ${r.status}`);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.warn(`[bot-kb] upsert ${sourceId} échec :`, e instanceof Error ? e.message : String(e));
-    return false;
-  }
+function headers() {
+  return {
+    "Content-Type": "application/json",
+    "X-Webhook-Secret": BOT_KB_SECRET as string,
+  };
 }
 
-export async function deleteKbItem(sourceId: string): Promise<boolean> {
-  if (!botKbEnabled()) return false;
-  try {
-    const r = await fetch(`${BOT_KB_URL}/kb/delete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Webhook-Secret": BOT_KB_SECRET as string },
-      body: JSON.stringify({ sourceId }),
-      signal: AbortSignal.timeout(15000),
-    });
-    return r.ok;
-  } catch (e) {
-    console.warn(`[bot-kb] delete ${sourceId} échec :`, e instanceof Error ? e.message : String(e));
-    return false;
-  }
+export interface KbSource {
+  url: string;
+  title: string | null;
+  kind: string | null;
+  chunks: number;
+  sourceType: "site" | "document" | "manuel" | "autre";
+  preview: string;
+  updated: string | null;
 }
 
-// Construit le texte d'une Q&R pour la KB du bot.
-export function qaContent(question: string, answer: string): string {
-  return `Question : ${question}\nRéponse : ${answer}`;
+export async function listKbSources(): Promise<KbSource[]> {
+  if (!botKbEnabled()) return [];
+  const r = await fetch(`${BOT_KB_URL}/kb/list`, {
+    headers: headers(),
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!r.ok) throw new Error(`bot /kb/list HTTP ${r.status}`);
+  const j = await r.json();
+  return (j.sources ?? []) as KbSource[];
+}
+
+export async function getKbSource(
+  url: string
+): Promise<{ url: string; title: string | null; kind: string | null; sourceType: string; content: string } | null> {
+  if (!botKbEnabled()) return null;
+  const r = await fetch(`${BOT_KB_URL}/kb/get?url=${encodeURIComponent(url)}`, {
+    headers: headers(),
+    signal: AbortSignal.timeout(20000),
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`bot /kb/get HTTP ${r.status}`);
+  return (await r.json()).source ?? null;
+}
+
+export async function upsertKbSource(p: {
+  url?: string;
+  sourceId?: string;
+  title?: string | null;
+  kind?: string;
+  content: string;
+}): Promise<{ chunks: number }> {
+  if (!botKbEnabled()) throw new Error("BOT_KB non configuré (BOT_KB_URL / BOT_KB_SECRET)");
+  const r = await fetch(`${BOT_KB_URL}/kb/upsert`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(p),
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!r.ok) throw new Error(`bot /kb/upsert HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return await r.json();
+}
+
+export async function deleteKbSource(url: string): Promise<{ deleted: number }> {
+  if (!botKbEnabled()) throw new Error("BOT_KB non configuré");
+  const r = await fetch(`${BOT_KB_URL}/kb/delete`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ url }),
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!r.ok) throw new Error(`bot /kb/delete HTTP ${r.status}`);
+  return await r.json();
 }

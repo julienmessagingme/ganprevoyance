@@ -9,7 +9,14 @@ import { handleMessage } from "./agent.mjs";
 import { sendOutbound, sendText, mmEnabled, maybeHandoff, mmWarmup } from "./mmclient.mjs";
 import { env } from "./db.mjs";
 import { warmupEmbedder } from "./embedder.mjs";
-import { upsertKbSource, deleteKbSource } from "./kb-ingest.mjs";
+import {
+  upsertKbSource,
+  deleteKbSource,
+  listKbSources,
+  getKbSource,
+  upsertKbByUrl,
+  deleteKbByUrl,
+} from "./kb-ingest.mjs";
 
 // Retire les accolades parasites éventuelles autour des valeurs du flow.
 const clean = (s) => String(s ?? "").trim().replace(/^\{+|\}+$/g, "").trim();
@@ -126,27 +133,39 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health")
     return send(res, 200, { ok: true });
 
-  // API base de connaissance (appelée par l'onglet du dashboard). Synchrone :
-  // l'appelant attend le résultat. Auth par le même secret que le webhook.
-  if (req.method === "POST" && (req.url === "/kb/upsert" || req.url === "/kb/delete")) {
+  // API base de connaissance (appelée par l'onglet du dashboard). Auth par le
+  // même secret que le webhook. Source unique de vérité = kb_chunks (pgvector).
+  if (req.url && req.url.startsWith("/kb/")) {
     if (req.headers["x-webhook-secret"] !== SECRET)
       return send(res, 401, { error: "unauthorized" });
-    let body;
     try {
-      body = JSON.parse((await readBody(req)) || "{}");
-    } catch {
-      return send(res, 400, { error: "JSON invalide" });
-    }
-    try {
-      if (req.url === "/kb/upsert") {
-        if (!body.sourceId || !String(body.content || "").trim())
-          return send(res, 400, { error: "sourceId et content requis" });
-        const r = await upsertKbSource(body);
-        return send(res, 200, { ok: true, ...r });
+      // Lecture : liste des sources + contenu d'une source (pour l'affichage/édition).
+      if (req.method === "GET" && req.url.startsWith("/kb/list")) {
+        return send(res, 200, { ok: true, sources: await listKbSources() });
       }
-      if (!body.sourceId) return send(res, 400, { error: "sourceId requis" });
-      const r = await deleteKbSource(body.sourceId);
-      return send(res, 200, { ok: true, ...r });
+      if (req.method === "GET" && req.url.startsWith("/kb/get")) {
+        const u = new URL(req.url, "http://x").searchParams.get("url");
+        if (!u) return send(res, 400, { error: "url requise" });
+        const src = await getKbSource(u);
+        if (!src) return send(res, 404, { error: "introuvable" });
+        return send(res, 200, { ok: true, source: src });
+      }
+      if (req.method === "POST" && req.url === "/kb/upsert") {
+        const body = JSON.parse((await readBody(req)) || "{}");
+        if (!String(body.content || "").trim())
+          return send(res, 400, { error: "content requis" });
+        // Par url (édition d'une source existante) ou par sourceId (nouvelle entrée).
+        if (body.url) return send(res, 200, { ok: true, ...(await upsertKbByUrl(body)) });
+        if (body.sourceId) return send(res, 200, { ok: true, ...(await upsertKbSource(body)) });
+        return send(res, 400, { error: "url ou sourceId requis" });
+      }
+      if (req.method === "POST" && req.url === "/kb/delete") {
+        const body = JSON.parse((await readBody(req)) || "{}");
+        if (body.url) return send(res, 200, { ok: true, ...(await deleteKbByUrl(body.url)) });
+        if (body.sourceId) return send(res, 200, { ok: true, ...(await deleteKbSource(body.sourceId)) });
+        return send(res, 400, { error: "url ou sourceId requis" });
+      }
+      return send(res, 404, { error: "not found" });
     } catch (e) {
       console.error("[kb-api]", req.url, e.message);
       return send(res, 500, { error: String(e.message) });
