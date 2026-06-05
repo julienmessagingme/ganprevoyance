@@ -183,7 +183,6 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
                 <th className="px-3 py-2 font-medium">Type</th>
                 <th className="px-3 py-2 font-medium">Titre</th>
                 <th className="px-3 py-2 font-medium">Aperçu</th>
-                <th className="px-3 py-2 font-medium text-right">Extraits</th>
                 <th className="px-3 py-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -212,10 +211,9 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
                       </a>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-zinc-600 max-w-[320px]">
+                  <td className="px-3 py-2 text-zinc-600 max-w-[360px]">
                     <div className="line-clamp-2">{s.preview}</div>
                   </td>
-                  <td className="px-3 py-2 text-right text-zinc-500">{s.chunks}</td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     <Button variant="outline" size="sm" onClick={() => openEdit(s.url)}>
                       Voir / éditer
@@ -237,7 +235,7 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
       )}
 
       <Dialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl w-[92vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editUrl ? "Éditer l’entrée" : "Ajouter à la base de connaissance"}</DialogTitle>
           </DialogHeader>
@@ -259,7 +257,7 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 disabled={busy}
-                rows={14}
+                rows={24}
                 className="w-full rounded-md border px-3 py-2 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-zinc-300"
                 placeholder={"Pour une question/réponse :\n\nQuestion : ...\nRéponse : ..."}
               />
