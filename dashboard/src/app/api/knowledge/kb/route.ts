@@ -22,14 +22,16 @@ async function gate(): Promise<boolean> {
 // GET /api/knowledge/kb?url=...    -> contenu complet d'une source (édition)
 export async function GET(req: Request) {
   if (!(await gate())) return NextResponse.json({ error: "unauth" }, { status: 401 });
-  const url = new URL(req.url).searchParams.get("url");
+  const params = new URL(req.url).searchParams;
+  const url = params.get("url");
+  const q = params.get("q") || "";
   try {
     if (url) {
       const source = await getKbSource(url);
       if (!source) return NextResponse.json({ error: "not found" }, { status: 404 });
       return NextResponse.json({ source });
     }
-    return NextResponse.json({ sources: await listKbSources() });
+    return NextResponse.json({ sources: await listKbSources(q) });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
   }

@@ -82,9 +82,29 @@ function sourceType(url) {
  * titre, type, nb de chunks, aperçu, date. Permet de voir tout le contenu
  * (site scrapé + documents + entrées manuelles) au même endroit.
  */
-export async function listKbSources() {
-  const rows = await withDb((client) =>
-    client.query(
+export async function listKbSources(q = "") {
+  const term = String(q || "").trim();
+  const rows = await withDb((client) => {
+    if (term) {
+      const like = `%${term}%`;
+      // Recherche plein-texte (ILIKE) sur le CONTENU et le titre. On renvoie
+      // toutes les sources dont au moins un chunk matche, et l'aperçu privilégie
+      // le chunk qui matche (pour voir pourquoi ça ressort).
+      return client.query(
+        `select url,
+                (array_agg(title order by chunk_index))[1] as title,
+                (array_agg(kind  order by chunk_index))[1] as kind,
+                count(*)::int as chunks,
+                (array_agg(content order by (content ilike $1) desc, chunk_index))[1] as preview,
+                max(coalesce(scraped_at, created_at)) as updated
+         from kb_chunks
+         where url in (select url from kb_chunks where content ilike $1 or title ilike $1)
+         group by url
+         order by max(coalesce(scraped_at, created_at)) desc nulls last`,
+        [like]
+      );
+    }
+    return client.query(
       `select url,
               (array_agg(title order by chunk_index))[1] as title,
               (array_agg(kind  order by chunk_index))[1] as kind,
@@ -94,8 +114,8 @@ export async function listKbSources() {
        from kb_chunks
        group by url
        order by max(coalesce(scraped_at, created_at)) desc nulls last`
-    )
-  );
+    );
+  });
   return rows.rows.map((r) => ({
     url: r.url,
     title: r.title,

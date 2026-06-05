@@ -29,9 +29,10 @@ export interface KbSource {
   updated: string | null;
 }
 
-export async function listKbSources(): Promise<KbSource[]> {
+export async function listKbSources(q = ""): Promise<KbSource[]> {
   if (!botKbEnabled()) return [];
-  const r = await fetch(`${BOT_KB_URL}/kb/list`, {
+  const url = `${BOT_KB_URL}/kb/list${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+  const r = await fetch(url, {
     headers: headers(),
     signal: AbortSignal.timeout(20000),
   });

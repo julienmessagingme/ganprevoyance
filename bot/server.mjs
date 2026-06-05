@@ -155,7 +155,8 @@ const server = http.createServer(async (req, res) => {
     try {
       // Lecture : liste des sources + contenu d'une source (pour l'affichage/édition).
       if (req.method === "GET" && req.url.startsWith("/kb/list")) {
-        return send(res, 200, { ok: true, sources: await listKbSources() });
+        const q = new URL(req.url, "http://x").searchParams.get("q") || "";
+        return send(res, 200, { ok: true, sources: await listKbSources(q) });
       }
       if (req.method === "GET" && req.url.startsWith("/kb/get")) {
         const u = new URL(req.url, "http://x").searchParams.get("url");

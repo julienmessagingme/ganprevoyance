@@ -47,12 +47,15 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (q = "") => {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch("/api/knowledge/kb");
+      const r = await fetch(
+        `/api/knowledge/kb${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`
+      );
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
       setSources(j.sources ?? []);
@@ -63,9 +66,11 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
     }
   }, []);
 
+  // Recherche plein-texte (contenu + titre), debounce 300 ms.
   useEffect(() => {
-    load();
-  }, [load]);
+    const t = setTimeout(() => load(query), 300);
+    return () => clearTimeout(t);
+  }, [query, load]);
 
   function openCreate() {
     setEditUrl(null);
@@ -110,7 +115,7 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
       if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
       toast.success(editUrl ? "Entrée mise à jour" : "Entrée ajoutée à la base du bot");
       setOpen(false);
-      await load();
+      await load(query);
     } catch (e) {
       toast.error("Échec : " + (e instanceof Error ? e.message : String(e)));
     } finally {
@@ -125,7 +130,7 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
       toast.success("Entrée supprimée");
-      await load();
+      await load(query);
     } catch (e) {
       toast.error("Échec : " + (e instanceof Error ? e.message : String(e)));
     }
@@ -136,16 +141,25 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-xl font-semibold">Base de connaissance</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={load} disabled={loading}>
+          <Button variant="outline" onClick={() => load(query)} disabled={loading}>
             Rafraîchir
           </Button>
           <Button onClick={openCreate}>+ Ajouter</Button>
         </div>
       </div>
-      <p className="text-sm text-zinc-500 mb-5">
+      <p className="text-sm text-zinc-500 mb-4">
         Contenu utilisé par le bot WhatsApp de {schoolName} pour répondre (site, documents,
         entrées manuelles). Tout ce qui est ici alimente directement les réponses du bot.
       </p>
+
+      <div className="mb-4">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="🔎 Rechercher dans la base de connaissance (contenu, titre)…"
+          className="max-w-xl"
+        />
+      </div>
 
       {error && (
         <div className="mb-4 rounded-md bg-red-50 text-red-700 text-sm p-3">
@@ -157,7 +171,9 @@ export function KnowledgeClient({ schoolName }: { schoolName: string }) {
         <div className="text-sm text-zinc-500">Chargement…</div>
       ) : sources.length === 0 ? (
         <div className="text-sm text-zinc-500">
-          Base vide. Ajoutez une entrée, ou lancez le scraping / l’import de documents côté bot.
+          {query.trim()
+            ? `Aucun résultat pour « ${query.trim()} ».`
+            : "Base vide. Ajoutez une entrée, ou lancez le scraping / l’import de documents côté bot."}
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border bg-white">
