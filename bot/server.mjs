@@ -61,6 +61,14 @@ function longConvoDelay(turns) {
   return Math.min(LONG_CONVO_MAX_MS, (turns - LONG_CONVO_START) * LONG_CONVO_STEP_MS);
 }
 
+// Liste blanche de test : si non vide, le bot n'IGNORE PAS tous les autres
+// contacts (il ne les traite ni ne leur répond). Permet de tester le bot sur son
+// propre WhatsApp sans le diffuser aux vrais clients. Vide = comportement normal.
+const SEND_ALLOWLIST = (env.SEND_ALLOWLIST || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const PORT = process.env.PORT || env.PORT || 8130;
 // HOST : sur VPS, binder sur la gateway Docker mcp-robot_default (172.18.0.1) pour
 // que NPM atteigne le service sans l'exposer sur l'IP publique. Défaut "0.0.0.0".
@@ -96,6 +104,12 @@ function readBody(req) {
 
 async function processInBackground(externalId, message) {
   const t0 = Date.now();
+  // Mode test privé : on ignore tout contact hors liste blanche (on log quand
+  // même son id, utile pour récupérer le bon user_ns à allowlister).
+  if (SEND_ALLOWLIST.length > 0 && !SEND_ALLOWLIST.includes(externalId)) {
+    console.log(`[allowlist] ${externalId} ignoré (hors liste de test) :: "${message}"`);
+    return;
+  }
   try {
     const { active, queued } = gate.stats();
     if (queued > 0)
