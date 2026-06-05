@@ -8,6 +8,9 @@ const TOKEN = env.MM_API_TOKEN;
 
 // Node "parler à un conseiller" (optionnel) : déclenché par l'outil d'escalade.
 const HELP_NODE = env.MM_HELP_NODE_NS || null;
+// User field (par namespace) où écrire le résumé de la conversation pour le
+// conseiller, juste avant de déclencher le node de transfert.
+const SUMMARY_FIELD = env.MM_SUMMARY_FIELD_NS || null;
 // Subflow "agent IA interne UChat" — escape hatch quand le budget API est saturé.
 // No-op tant que MM_OVERFLOW_NODE_NS n'est pas défini.
 const OVERFLOW_NODE = env.MM_OVERFLOW_NODE_NS || null;
@@ -161,10 +164,24 @@ export async function sendText(userNs, content) {
   }
 }
 
-/** Escalade vers un conseiller humain : déclenche le node de web-callback. */
-export async function sendHelpCard(userNs) {
+/**
+ * Escalade vers un conseiller humain. Si un résumé est fourni, on l'écrit
+ * d'abord dans le user field (par namespace) destiné au conseiller, puis on
+ * déclenche le node de transfert (qui envoie le message de confirmation).
+ */
+export async function sendHelpCard(userNs, summary = null) {
   if (!HELP_NODE) return { ok: false, error: "MM_HELP_NODE_NS absent" };
   try {
+    if (summary && SUMMARY_FIELD) {
+      const set = await mmRequest("PUT", "/subscriber/set-user-field", {
+        user_ns: userNs,
+        var_ns: SUMMARY_FIELD,
+        value: summary,
+      });
+      const sc = checkResult(set);
+      if (!sc.ok) console.error("[escalade] écriture résumé échec :", sc.error);
+      await sleep(1500); // laisse le champ se propager avant le node
+    }
     return checkResult(
       await mmRequest("POST", "/subscriber/send-node", {
         user_ns: userNs,
@@ -188,7 +205,9 @@ export async function sendOutbound(userNs, outbound) {
     if (!first) await sleep(1200);
     first = false;
     if (m.type === "help") {
-      const r = HELP_NODE ? await sendHelpCard(userNs) : await sendText(userNs, m.text || "Je transmets votre demande à un conseiller.");
+      const r = HELP_NODE
+        ? await sendHelpCard(userNs, m.summary)
+        : await sendText(userNs, m.text || "Je transmets votre demande à un conseiller Gan Prévoyance.");
       results.push(r);
     } else {
       results.push(await sendText(userNs, m.text));

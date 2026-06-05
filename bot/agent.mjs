@@ -243,14 +243,54 @@ async function processMessage(externalId, userText) {
     )
   );
 
+  // Si escalade : résumé de la conversation pour le conseiller (écrit dans le
+  // user field MM par mmclient avant de déclencher le node de transfert).
+  let summary = null;
+  if (escalate) {
+    try {
+      summary = await summarizeForAdvisor(messages);
+    } catch (e) {
+      console.error(`[résumé] échec ${externalId}:`, e.message);
+    }
+  }
+
   // 4. Construire les sorties. Mention IA EN DUR au 1er tour (conformité).
   const outbound = [];
   if (isFirstTurn) outbound.push({ type: "text", text: INTRO });
-  if (textReply && textReply.trim()) outbound.push({ type: "text", text: textReply.trim() });
-  if (escalate && helpNodeEnabled) outbound.push({ type: "help" });
+  if (escalate && helpNodeEnabled) {
+    // Le node de transfert envoie lui-même le message de confirmation -> on ne
+    // double pas avec le texte du modèle.
+    outbound.push({ type: "help", summary });
+  } else if (textReply && textReply.trim()) {
+    outbound.push({ type: "text", text: textReply.trim() });
+  }
   if (!outbound.length) outbound.push({ type: "text", text: "Pouvez-vous préciser votre demande ?" });
 
   return { outbound, turns };
+}
+
+// Résumé de la conversation pour le conseiller qui va rappeler le client.
+// Factuel, sans formule de politesse, sans engagement.
+async function summarizeForAdvisor(messages) {
+  const transcript = messages
+    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim() && !m.content.startsWith("[Système]"))
+    .map((m) => `${m.role === "user" ? "Client" : "Assistant"}: ${m.content.trim()}`)
+    .join("\n");
+  if (!transcript) return null;
+
+  const completion = await openai.chat.completions.create({
+    model: MODEL,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Tu produis, pour un conseiller Gan Prévoyance qui va rappeler ce client, un résumé FACTUEL et concis (3 à 5 phrases) de l'échange du client avec l'assistant IA. Indique le sujet principal et ce que le client cherche / son contexte. Pas de formule de politesse, pas d'engagement, pas de recommandation d'action. Français.",
+      },
+      { role: "user", content: `Échange à résumer :\n\n${transcript}` },
+    ],
+    temperature: 0.2,
+  });
+  return (completion.choices[0].message.content || "").trim() || null;
 }
 
 // ── Heuristiques de détection (garde-fous d'entrée) ────────────────────────
