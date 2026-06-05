@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/require-user";
 import { uploadToVectorStore, deleteFromVectorStore, deleteOpenAIFile } from "@/lib/openai-kb";
 import { createTxtFromQA, buildQaFileName } from "@/lib/knowledge/file-gen";
 import { findQaDuplicate } from "@/lib/knowledge/qa-shared";
+import { pushKbItem, qaContent } from "@/lib/bot-kb";
 
 export const runtime = "nodejs";
 // Long-running bulk import — up to a few minutes for ~hundred lines.
@@ -202,19 +203,23 @@ export async function POST(req: Request) {
                 { skipIndexation: true }
               );
 
-              const { error } = await sb.from("knowledge_items").insert({
-                school_slug: schoolSlug,
-                type: "qa",
-                file_name: fileName,
-                question: pair.question.trim(),
-                answer: pair.answer.trim(),
-                theme_id: themeId,
-                subtheme_id: subthemeId,
-                vector_store_file_id: uploaded.vectorStoreFileId,
-                openai_file_id: uploaded.fileId,
-                status: uploaded.status,
-                uploaded_by: user.userId,
-              });
+              const { data: inserted, error } = await sb
+                .from("knowledge_items")
+                .insert({
+                  school_slug: schoolSlug,
+                  type: "qa",
+                  file_name: fileName,
+                  question: pair.question.trim(),
+                  answer: pair.answer.trim(),
+                  theme_id: themeId,
+                  subtheme_id: subthemeId,
+                  vector_store_file_id: uploaded.vectorStoreFileId,
+                  openai_file_id: uploaded.fileId,
+                  status: uploaded.status,
+                  uploaded_by: user.userId,
+                })
+                .select("id")
+                .single();
               if (error) {
                 // DB insert failed AFTER the OpenAI upload succeeded. Roll
                 // back the OpenAI side so we don't accumulate orphans, then
@@ -228,6 +233,13 @@ export async function POST(req: Request) {
                 void deleteOpenAIFile(uploaded.fileId).catch(() => undefined);
                 throw new Error(`db_error: ${error.message}`);
               }
+
+              // Alimente la KB du bot avec cette Q&R.
+              await pushKbItem(inserted.id, {
+                kind: "qa",
+                title: pair.question.trim(),
+                content: qaContent(pair.question.trim(), pair.answer.trim()),
+              });
 
               succeeded = true;
               if (attempt > 1) {

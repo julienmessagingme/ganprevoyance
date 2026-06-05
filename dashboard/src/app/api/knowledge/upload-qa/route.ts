@@ -10,6 +10,7 @@ import {
 } from "@/lib/openai-kb";
 import { createTxtFromQA, buildQaFileName } from "@/lib/knowledge/file-gen";
 import { findQaDuplicate, resolveThemeForSchool } from "@/lib/knowledge/qa-shared";
+import { pushKbItem, qaContent } from "@/lib/bot-kb";
 
 export const runtime = "nodejs";
 export const maxDuration = 90;
@@ -129,6 +130,14 @@ export async function POST(req: Request) {
     void deleteOpenAIFile(uploaded.fileId).catch(() => undefined);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Alimente la KB du bot (pgvector) : c'est ce qui rend la Q&R utilisable par
+  // le bot WhatsApp. Best-effort, ne bloque pas la réponse.
+  await pushKbItem(item.id, {
+    kind: "qa",
+    title: question.trim(),
+    content: qaContent(question.trim(), answer.trim()),
+  });
 
   console.log(
     JSON.stringify({

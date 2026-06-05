@@ -10,6 +10,7 @@ import {
 } from "@/lib/openai-kb";
 import { createTxtFromQA, buildQaFileName } from "@/lib/knowledge/file-gen";
 import { findQaDuplicate, resolveThemeForSchool } from "@/lib/knowledge/qa-shared";
+import { pushKbItem, deleteKbItem, qaContent } from "@/lib/bot-kb";
 
 export const runtime = "nodejs";
 export const maxDuration = 90;
@@ -159,6 +160,13 @@ export async function PATCH(
     );
   }
 
+  // Met à jour la KB du bot avec la nouvelle version de la Q&R.
+  await pushKbItem(id, {
+    kind: "qa",
+    title: question.trim(),
+    content: qaContent(question.trim(), answer.trim()),
+  });
+
   console.log(
     JSON.stringify({
       level: "info",
@@ -234,6 +242,9 @@ export async function DELETE(
 
   const { error } = await sb.from("knowledge_items").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Retire l'entrée de la KB du bot.
+  await deleteKbItem(id);
 
   console.log(
     JSON.stringify({

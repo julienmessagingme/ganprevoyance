@@ -9,6 +9,7 @@ import { handleMessage } from "./agent.mjs";
 import { sendOutbound, sendText, mmEnabled, maybeHandoff, mmWarmup } from "./mmclient.mjs";
 import { env } from "./db.mjs";
 import { warmupEmbedder } from "./embedder.mjs";
+import { upsertKbSource, deleteKbSource } from "./kb-ingest.mjs";
 
 // Retire les accolades parasites éventuelles autour des valeurs du flow.
 const clean = (s) => String(s ?? "").trim().replace(/^\{+|\}+$/g, "").trim();
@@ -124,6 +125,33 @@ async function processInBackground(externalId, message) {
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health")
     return send(res, 200, { ok: true });
+
+  // API base de connaissance (appelée par l'onglet du dashboard). Synchrone :
+  // l'appelant attend le résultat. Auth par le même secret que le webhook.
+  if (req.method === "POST" && (req.url === "/kb/upsert" || req.url === "/kb/delete")) {
+    if (req.headers["x-webhook-secret"] !== SECRET)
+      return send(res, 401, { error: "unauthorized" });
+    let body;
+    try {
+      body = JSON.parse((await readBody(req)) || "{}");
+    } catch {
+      return send(res, 400, { error: "JSON invalide" });
+    }
+    try {
+      if (req.url === "/kb/upsert") {
+        if (!body.sourceId || !String(body.content || "").trim())
+          return send(res, 400, { error: "sourceId et content requis" });
+        const r = await upsertKbSource(body);
+        return send(res, 200, { ok: true, ...r });
+      }
+      if (!body.sourceId) return send(res, 400, { error: "sourceId requis" });
+      const r = await deleteKbSource(body.sourceId);
+      return send(res, 200, { ok: true, ...r });
+    } catch (e) {
+      console.error("[kb-api]", req.url, e.message);
+      return send(res, 500, { error: String(e.message) });
+    }
+  }
 
   if (req.method !== "POST" || !req.url.startsWith("/webhook"))
     return send(res, 404, { error: "not found" });

@@ -5,6 +5,7 @@ import { getCurrentSchoolSlugChecked } from "@/lib/schools/context";
 import { requireUser } from "@/lib/auth/require-user";
 import { uploadToVectorStore, deleteOpenAIFile, deleteFromVectorStore } from "@/lib/openai-kb";
 import { createPdfFromText, sanitizeFileName } from "@/lib/knowledge/file-gen";
+import { pushKbItem } from "@/lib/bot-kb";
 
 export const runtime = "nodejs";
 export const maxDuration = 90;
@@ -103,6 +104,9 @@ export async function POST(req: Request) {
     );
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Alimente la KB du bot (pgvector) avec le texte brut.
+  await pushKbItem(item.id, { kind: "text", title, content: parsed.data.text });
 
   console.log(
     JSON.stringify({
