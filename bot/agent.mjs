@@ -129,6 +129,12 @@ function normalizeAssistant(m) {
 
 const KB_LIMIT = Number(env.KB_LIMIT || 5);
 
+// Indice de mécontentement : score lissé 0-100 par conversation. Au-delà du seuil
+// (sensibilité moyenne), on déclenche UNE fois le node MM dédié. Le score monte
+// avec les signaux négatifs et redescend (décroissance) sur les tours neutres.
+const DISCONTENT_THRESHOLD = Number(env.DISCONTENT_THRESHOLD || 65);
+const DISCONTENT_DECAY = Number(env.DISCONTENT_DECAY || 0.5);
+
 // ── Sérialisation par utilisateur (mutex mémoire) ──────────────────────────
 const userChains = new Map();
 export function handleMessage(externalId, userText) {
@@ -158,6 +164,8 @@ async function processMessage(externalId, userText) {
   });
 
   const turns = (conv.turns || 0) + 1;
+  const prevDiscontent = Number(conv.discontent_score) || 0;
+  const alreadyAlerted = conv.discontent_alerted === true;
   const messages = pruneHistory(Array.isArray(conv.messages) ? conv.messages : []);
 
   // Mention IA obligatoire (conformité) : on l'envoie quand l'IA n'a encore JAMAIS
@@ -191,6 +199,10 @@ async function processMessage(externalId, userText) {
         "[Système] Le client exprime du mécontentement. Rappel impératif : empathie sobre, AUCUNE reconnaissance de faute ou d'erreur, AUCUN engagement ni promesse, puis propose rapidement la mise en relation avec un conseiller.",
     });
   }
+
+  // Indice de mécontentement : scoring lancé EN PARALLÈLE (heuristique + LLM),
+  // awaité plus bas → quasi pas de latence ajoutée.
+  const frustrationPromise = computeFrustration(messages, userText);
 
   // RAG DÉTERMINISTE : on récupère en dur les passages KB pertinents pour le
   // message courant et on les injecte dans le system. Le modèle répond à partir
@@ -250,11 +262,18 @@ async function processMessage(externalId, userText) {
     break;
   }
 
+  // Indice de mécontentement : score lissé (monte avec la frustration, décroît
+  // sinon) + alerte UNE seule fois quand on franchit le seuil.
+  const frustration = await frustrationPromise.catch(() => 0);
+  const discontent = Math.max(0, Math.min(100, prevDiscontent * DISCONTENT_DECAY + frustration));
+  const discontentAlert = !alreadyAlerted && discontent >= DISCONTENT_THRESHOLD;
+  if (discontentAlert) console.log(`[mécontentement] ${externalId} score=${Math.round(discontent)} -> node`);
+
   // 3. SAUVEGARDER (transaction courte).
   await withDb((c) =>
     c.query(
-      "update conversations set messages = $1, turns = $2, updated_at = now() where external_id = $3",
-      [JSON.stringify(messages), turns, externalId]
+      "update conversations set messages = $1, turns = $2, discontent_score = $3, discontent_alerted = $4, updated_at = now() where external_id = $5",
+      [JSON.stringify(messages), turns, discontent, alreadyAlerted || discontentAlert, externalId]
     )
   );
 
@@ -281,7 +300,7 @@ async function processMessage(externalId, userText) {
   }
   if (!outbound.length) outbound.push({ type: "text", text: "Pouvez-vous préciser votre demande ?" });
 
-  return { outbound, turns };
+  return { outbound, turns, discontentAlert };
 }
 
 // Résumé de la conversation pour le conseiller qui va rappeler le client.
@@ -340,4 +359,60 @@ function looksLikeComplaint(text) {
   return /mécontent|mecontent|insatisf|réclamation|reclamation|scandaleux|inadmissible|déçu|decu|inacceptable|honteux|arnaque|porter plainte|plainte|en colère|colere|lamentable|incompétent|incompetent|nul\b|catastrophe/.test(
     t
   );
+}
+
+// ── Indice de mécontentement ───────────────────────────────────────────────
+
+// Couche 1 : heuristique (gratuite, instantanée).
+function heuristicFrustration(text) {
+  const raw = String(text || "");
+  const t = raw.toLowerCase();
+  let s = 0;
+  if (/résili|resili|porter plainte|\bplainte\b|médiateur|mediateur|avocat|tribunal|signaler|dénonc|denonc/.test(t)) s = Math.max(s, 78);
+  if (/scandaleux|inadmissible|inacceptable|honteux|\bhonte\b|lamentable|arnaque|escroc|incompétent|incompetent|catastrophe/.test(t)) s = Math.max(s, 70);
+  if (/mécontent|mecontent|insatisf|très déçu|tres decu|déçu|decu|en colère|colere|ras[- ]le[- ]bol|j'en ai marre|marre de/.test(t)) s = Math.max(s, 55);
+  if (/toujours pas|ça (ne )?marche pas|ca (ne )?marche pas|rien compris|déjà dit|deja dit|je répète|je repete|encore une fois|sert? à rien|aucune réponse|aucune reponse/.test(t)) s = Math.max(s, 42);
+  if (/[!?]{3,}/.test(raw)) s = Math.max(s, 35);
+  // Majuscules agressives (cri) sur un message un peu long.
+  const letters = raw.replace(/[^A-Za-zÀ-ÿ]/g, "");
+  if (letters.length > 10) {
+    const up = (raw.match(/[A-ZÀ-Ÿ]/g) || []).length;
+    if (up / letters.length > 0.6) s = Math.max(s, 50);
+  }
+  return s;
+}
+
+// Couche 2 : score sémantique par le LLM (0-100) sur le dernier message client.
+async function scoreFrustrationLLM(contextText, userText) {
+  const completion = await openai.chat.completions.create({
+    model: MODEL,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Tu évalues le niveau de FRUSTRATION / mécontentement du DERNIER message d'un client envers Gan Prévoyance, de 0 (neutre ou satisfait) à 100 (très en colère, menace de résilier ou de porter plainte). Tiens compte du contexte. Réponds UNIQUEMENT par un entier entre 0 et 100, sans aucun autre texte.",
+      },
+      { role: "user", content: `Contexte récent :\n${contextText || "(aucun)"}\n\nDernier message du client : "${userText}"\n\nNiveau de frustration (0-100) :` },
+    ],
+    temperature: 0,
+  });
+  const n = parseInt((completion.choices[0].message.content || "").replace(/[^0-9]/g, ""), 10);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+}
+
+// Frustration du tour = max(heuristique, score LLM).
+async function computeFrustration(messages, userText) {
+  const h = heuristicFrustration(userText);
+  let l = 0;
+  try {
+    const ctx = messages
+      .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim() && !m.content.startsWith("[Système]"))
+      .slice(-6)
+      .map((m) => `${m.role === "user" ? "Client" : "Bot"}: ${m.content.trim()}`)
+      .join("\n");
+    l = await scoreFrustrationLLM(ctx, userText);
+  } catch {
+    /* heuristique seule en repli */
+  }
+  return Math.max(h, l);
 }

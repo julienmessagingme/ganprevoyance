@@ -49,8 +49,13 @@ create table if not exists conversations (
   external_id text unique not null,
   messages    jsonb default '[]'::jsonb,     -- historique format OpenAI
   turns       int  default 0,                -- compteur de tours (persiste après pruning)
+  discontent_score   double precision default 0,   -- indice de mécontentement lissé (0-100)
+  discontent_alerted boolean default false,        -- node mécontentement déjà déclenché ?
   updated_at  timestamptz default now(),
   created_at  timestamptz default now()
 );
+-- Migrations idempotentes (table pré-existante) :
+alter table conversations add column if not exists discontent_score double precision default 0;
+alter table conversations add column if not exists discontent_alerted boolean default false;
 
 create index if not exists conversations_updated_idx on conversations (updated_at desc);

@@ -14,9 +14,12 @@ const SUMMARY_FIELD = env.MM_SUMMARY_FIELD_NS || null;
 // Subflow "agent IA interne UChat" — escape hatch quand le budget API est saturé.
 // No-op tant que MM_OVERFLOW_NODE_NS n'est pas défini.
 const OVERFLOW_NODE = env.MM_OVERFLOW_NODE_NS || null;
+// Node "mécontentement" — déclenché quand l'indice de mécontentement dépasse le seuil.
+const DISCONTENT_NODE = env.MM_DISCONTENT_NODE_NS || null;
 
 export const mmEnabled = Boolean(TOKEN);
 export const helpNodeEnabled = Boolean(HELP_NODE);
+export const discontentNodeEnabled = Boolean(DISCONTENT_NODE);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -186,6 +189,21 @@ export async function sendHelpCard(userNs, summary = null) {
       await mmRequest("POST", "/subscriber/send-node", {
         user_ns: userNs,
         node_ns: HELP_NODE,
+      })
+    );
+  } catch (e) {
+    return { ok: false, error: String(e.message) };
+  }
+}
+
+/** Déclenche le node "mécontentement" (alerte) — simple send-node, une fois. */
+export async function sendDiscontentNode(userNs) {
+  if (!DISCONTENT_NODE) return { ok: false, error: "MM_DISCONTENT_NODE_NS absent" };
+  try {
+    return checkResult(
+      await mmRequest("POST", "/subscriber/send-node", {
+        user_ns: userNs,
+        node_ns: DISCONTENT_NODE,
       })
     );
   } catch (e) {

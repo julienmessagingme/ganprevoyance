@@ -6,9 +6,18 @@
 // Body attendu : { "external_id": "<user_ns>", "message": "<texte>" }
 import http from "node:http";
 import { handleMessage } from "./agent.mjs";
-import { sendOutbound, sendText, mmEnabled, maybeHandoff, mmWarmup } from "./mmclient.mjs";
+import {
+  sendOutbound,
+  sendText,
+  mmEnabled,
+  maybeHandoff,
+  mmWarmup,
+  sendDiscontentNode,
+  discontentNodeEnabled,
+} from "./mmclient.mjs";
 import { env } from "./db.mjs";
 import { warmupEmbedder } from "./embedder.mjs";
+import { purgeOldConversations } from "./purge-conv.mjs";
 import {
   upsertKbSource,
   deleteKbSource,
@@ -114,7 +123,7 @@ async function processInBackground(externalId, message) {
     const { active, queued } = gate.stats();
     if (queued > 0)
       console.log(`[gate] ${externalId} en file (actifs=${active}, en attente=${queued})`);
-    const { outbound, turns } = await gate(() => handleMessage(externalId, message));
+    const { outbound, turns, discontentAlert } = await gate(() => handleMessage(externalId, message));
     const convoDelay = longConvoDelay(turns);
     if (convoDelay > 0) {
       console.log(`[long-convo] ${externalId} tour ${turns} -> +${convoDelay}ms avant réponse`);
@@ -128,6 +137,11 @@ async function processInBackground(externalId, message) {
       const fail = results.filter((r) => !r.ok);
       sent = fail.length ? `${ok} ok / ${fail.length} échec (${fail[0].error})` : `${ok} ok`;
       if (await maybeHandoff(externalId)) sent += " +handoff";
+      // Indice de mécontentement franchi : on déclenche le node dédié (1 fois).
+      if (discontentAlert && discontentNodeEnabled) {
+        const dr = await sendDiscontentNode(externalId);
+        sent += dr.ok ? " +mécontentement" : ` +mécontentement-échec(${dr.error})`;
+      }
     } else if (NO_SEND) {
       sent = "no-send";
     }
@@ -217,4 +231,9 @@ server.listen(PORT, HOST, () => {
     .then(() => console.log("Embedder chaud."))
     .catch((e) => console.error("Échec warmup embedder :", e.message));
   if (mmEnabled && !NO_SEND) mmWarmup();
+  // Purge RGPD des conversations inactives : au boot + 1×/jour.
+  const runPurge = () =>
+    purgeOldConversations().catch((e) => console.error("[purge] échec :", e.message));
+  runPurge();
+  setInterval(runPurge, 24 * 3600 * 1000);
 });
