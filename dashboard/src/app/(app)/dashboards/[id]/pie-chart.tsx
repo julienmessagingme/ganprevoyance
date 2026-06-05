@@ -5,15 +5,15 @@ import {
   Pie,
   Cell,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import type { ComputedStep } from "@/lib/dashboards/types";
 import { compactStepLabel } from "@/lib/dashboards/types";
 
 // Palette dérivée du funnel mais étalée pour bien distinguer N parts.
-// 8 couleurs suffisent en pratique ; au-delà, recharts cycle.
-const PIE_COLORS = [
+// 8 couleurs suffisent en pratique ; au-delà, recharts cycle. Exportée pour que
+// la table (pie-table) affiche la même pastille de couleur par part (= légende).
+export const PIE_COLORS = [
   "#27272a", // zinc-800
   "#7c3aed", // violet-600
   "#0284c7", // sky-600
@@ -66,7 +66,7 @@ export function PieChartViz({ steps }: { steps: ComputedStep[] }) {
             data={data}
             dataKey="count"
             nameKey="label"
-            cx="40%"
+            cx="50%"
             cy="50%"
             outerRadius={120}
             innerRadius={0}
@@ -92,12 +92,6 @@ export function PieChartViz({ steps }: { steps: ComputedStep[] }) {
                   "Volume",
               ];
             }}
-          />
-          <Legend
-            layout="vertical"
-            align="right"
-            verticalAlign="middle"
-            wrapperStyle={{ fontSize: 12, lineHeight: "1.4" }}
           />
         </RPieChart>
       </ResponsiveContainer>

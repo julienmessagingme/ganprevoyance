@@ -2,6 +2,7 @@
 
 import type { ComputedStep } from "@/lib/dashboards/types";
 import { compactStepLabel } from "@/lib/dashboards/types";
+import { PIE_COLORS } from "./pie-chart";
 
 function pct(num: number, denom: number): string {
   if (denom === 0) return "—";
@@ -20,6 +21,12 @@ export function PieTable({ steps }: { steps: ComputedStep[] }) {
   const total = steps.reduce(
     (acc, s) => (s.available ? acc + s.count : acc),
     0
+  );
+  // Couleur par part, alignée EXACTEMENT sur le pie : seules les parts
+  // disponibles non-vides sont colorées, dans le même ordre (le pie filtre pareil).
+  let ci = 0;
+  const stepColors = steps.map((s) =>
+    s.available && s.count > 0 ? PIE_COLORS[ci++ % PIE_COLORS.length] : null
   );
   return (
     <div className="overflow-x-auto">
@@ -41,6 +48,10 @@ export function PieTable({ steps }: { steps: ComputedStep[] }) {
               >
                 <td className="py-2 pr-4">
                   <div>
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full mr-2 align-middle"
+                      style={{ backgroundColor: stepColors[i] ?? "#d4d4d8" }}
+                    />
                     <span className="text-zinc-400 mr-2">{i + 1}.</span>
                     {compactStepLabel(s)}
                     {!s.available && (
