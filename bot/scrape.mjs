@@ -1,8 +1,8 @@
 // Scrape ganprevoyance.fr -> table kb_chunks (FAQ + pages produits/garanties).
 // Stratégie : sitemap.xml si dispo, sinon crawl BFS borné depuis l'accueil.
-// Chaque page : extraction du texte principal (cheerio), découpage en chunks,
-// upsert idempotent sur (url, chunk_index). La vectorisation se fait après via
-// `npm run embed`.
+// Nettoyage en 2 passes : (1) retrait nav/menu/footer/cookie par sélecteur, puis
+// (2) filtre par FRÉQUENCE inter-pages (une ligne présente sur beaucoup de pages
+// = boilerplate de gabarit -> supprimée). La vectorisation se fait via `npm run embed`.
 import * as cheerio from "cheerio";
 import { withDb, closePool } from "./db.mjs";
 
@@ -10,12 +10,22 @@ const BASE = process.env.SCRAPE_BASE || "https://www.ganprevoyance.fr";
 const ORIGIN = new URL(BASE).origin;
 const MAX_PAGES = Number(process.env.SCRAPE_MAX_PAGES || 400);
 const CHUNK_CHARS = Number(process.env.SCRAPE_CHUNK_CHARS || 900);
+// Seuil du filtre boilerplate : une ligne vue sur >= ce ratio de pages est virée.
+const BOILER_RATIO = Number(process.env.SCRAPE_BOILER_RATIO || 0.2);
 // ganprevoyance.fr ne sert le contenu SSR qu'à un vrai UA navigateur (anti-bot).
-// Un UA générique renvoie une coquille vide -> on se présente comme Chrome.
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+
+// Filet de sécurité : lignes de gabarit évidentes (en plus du filtre par fréquence).
+const JUNK_LINE =
+  /^(mentions légales|données personnelles|gérer mes cookies|cookies\b|réclamations|contactez-nous|nous contacter|plan du site|groupe groupama|une marque|suivez-nous|nous suivre|tous droits réservés|©|accueil|retour|partager|imprimer|haut de page)\b/i;
+
+// CTA / nav de gabarit qui peuvent apparaître au milieu d'une ligne (non ancré).
+const JUNK_CONTAINS =
+  /(et si nous en parlions ensemble|je contacte un conseiller|me protéger, ma famille et moi|prendre rendez-vous|rappel gratuit|demander (un |une )?(devis|documentation|rappel)|souscrire en ligne|trouver une agence|nous appeler)/i;
 
 async function fetchText(url) {
   const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(20000) });
@@ -39,9 +49,7 @@ async function urlsFromSitemaps() {
       continue;
     }
     const $ = cheerio.load(xml, { xmlMode: true });
-    // sitemap index -> sous-sitemaps
     $("sitemap > loc").each((_, el) => queue.push($(el).text().trim()));
-    // urls
     $("url > loc").each((_, el) => {
       const u = $(el).text().trim();
       if (u && u.startsWith(ORIGIN)) found.add(u.split("#")[0]);
@@ -68,7 +76,7 @@ async function crawl() {
     found.add(u);
     const $ = cheerio.load(html);
     $("a[href]").each((_, el) => {
-      let href = $(el).attr("href");
+      const href = $(el).attr("href");
       if (!href) return;
       try {
         const abs = new URL(href, u).toString().split("#")[0];
@@ -81,27 +89,26 @@ async function crawl() {
   return [...found];
 }
 
-// Extrait titre + texte principal d'une page. Supprime nav/footer/scripts.
-function extract(html) {
+// Extrait titre + lignes de contenu. Retire nav/header/footer/menus/cookie.
+// ⚠️ NE PAS retirer <form> : ASP.NET WebForms, toute la page est dans un <form>.
+function extractLines(html) {
   const $ = cheerio.load(html);
-  // ⚠️ NE PAS retirer <form> : ganprevoyance.fr est en ASP.NET WebForms, toute la
-  // page est dans un unique <form runat="server"> -> le retirer vide la page.
-  $("script, style, noscript, nav, header, footer, svg, iframe, .cookie, #cookie, [role=navigation]").remove();
+  $(
+    "script, style, noscript, nav, header, footer, svg, iframe, [role=navigation], " +
+      "[class*=menu], [class*=Menu], [class*=cookie], [id*=cookie], " +
+      "ul.list-inline, .list-inline, .breadcrumb, [class*=breadcrumb]"
+  ).remove();
   const title = ($("h1").first().text() || $("title").text() || "").replace(/\s+/g, " ").trim();
-  // Conteneur principal probable, sinon body.
   const main = $("main").length ? $("main") : $("article").length ? $("article") : $("body");
-  // Paragraphes + titres + items de liste, dans l'ordre.
-  const parts = [];
+  const lines = [];
   main.find("h1, h2, h3, h4, p, li").each((_, el) => {
     const t = $(el).text().replace(/\s+/g, " ").trim();
-    if (t && t.length > 2) parts.push(t);
+    if (t && t.length > 2) lines.push(t);
   });
-  return { title, text: parts.join("\n") };
+  return { title, lines };
 }
 
-// Découpe le texte en chunks d'environ CHUNK_CHARS, aux frontières de lignes.
-function chunkText(text) {
-  const lines = text.split("\n");
+function chunkLines(lines) {
   const chunks = [];
   let buf = "";
   for (const line of lines) {
@@ -129,12 +136,11 @@ async function main() {
     urls = await crawl();
   }
   urls = urls.slice(0, MAX_PAGES);
-  console.log(`${urls.length} pages à traiter.`);
+  console.log(`${urls.length} pages à récupérer.`);
 
-  const now = new Date().toISOString();
-  let pages = 0;
-  let totalChunks = 0;
-
+  // ── Passe 1 : fetch + extraction des lignes ──────────────────────────────
+  const docs = [];
+  let fetched = 0;
   for (const url of urls) {
     let html;
     try {
@@ -143,14 +149,44 @@ async function main() {
       console.log(`  skip ${url} (${e.message})`);
       continue;
     }
-    const { title, text } = extract(html);
-    const chunks = chunkText(text);
+    const { title, lines } = extractLines(html);
+    docs.push({ url, title, lines });
+    if (++fetched % 30 === 0) console.log(`  récupéré ${fetched}/${urls.length}`);
+    await sleep(150);
+  }
+
+  // ── Détection du boilerplate : fréquence d'une ligne sur l'ensemble des pages ─
+  const pageCount = new Map();
+  for (const d of docs) {
+    for (const ln of new Set(d.lines.map(norm))) pageCount.set(ln, (pageCount.get(ln) || 0) + 1);
+  }
+  const nbPages = docs.length || 1;
+  const FREQ = Math.max(4, Math.ceil(BOILER_RATIO * nbPages));
+  const isBoiler = (line) => {
+    const n = norm(line);
+    return JUNK_LINE.test(n) || JUNK_CONTAINS.test(n) || (pageCount.get(n) || 0) >= FREQ;
+  };
+
+  // ── Passe 2 : filtre boilerplate + chunk + upsert ────────────────────────
+  const now = new Date().toISOString();
+  let pages = 0;
+  let totalChunks = 0;
+  let droppedLines = 0;
+  for (const d of docs) {
+    const kept = [];
+    for (const ln of d.lines) {
+      if (isBoiler(ln)) {
+        droppedLines++;
+        continue;
+      }
+      kept.push(ln);
+    }
+    const chunks = chunkLines(kept);
     if (chunks.length === 0) continue;
-    const kind = classify(url, title);
+    const kind = classify(d.url, d.title);
 
     await withDb(async (c) => {
-      // Remplace les chunks de cette page (réimport propre).
-      await c.query("delete from kb_chunks where url = $1", [url]);
+      await c.query("delete from kb_chunks where url = $1", [d.url]);
       for (let i = 0; i < chunks.length; i++) {
         await c.query(
           `insert into kb_chunks (url, title, section, kind, chunk_index, content, scraped_at)
@@ -158,18 +194,20 @@ async function main() {
            on conflict (url, chunk_index) do update
              set title = excluded.title, section = excluded.section, kind = excluded.kind,
                  content = excluded.content, scraped_at = excluded.scraped_at, embedding = null`,
-          [url, title, null, kind, i, chunks[i], now]
+          [d.url, d.title, null, kind, i, chunks[i], now]
         );
       }
     });
 
     pages++;
     totalChunks += chunks.length;
-    if (pages % 20 === 0) console.log(`  ${pages}/${urls.length} pages, ${totalChunks} chunks`);
-    await sleep(150);
+    if (pages % 20 === 0) console.log(`  ${pages}/${docs.length} pages, ${totalChunks} chunks`);
   }
 
-  console.log(`\nTerminé : ${pages} pages, ${totalChunks} chunks insérés.`);
+  console.log(
+    `\nTerminé : ${pages} pages, ${totalChunks} chunks (${droppedLines} lignes boilerplate retirées ; ` +
+      `seuil = présent sur ≥ ${FREQ}/${nbPages} pages).`
+  );
   console.log("Lance maintenant `npm run embed` pour vectoriser.");
   await closePool();
 }

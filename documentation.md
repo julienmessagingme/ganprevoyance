@@ -89,7 +89,10 @@ Inspiré d'**Odalys**, adapté à l'assurance (Q&A texte, pas de cartes), Gemini
   escalade conseiller (écrit le résumé conv dans le user field par `var_ns` via
   `set-user-field`, PUIS déclenche le node de transfert), handoff.
 - `embedder.mjs` / `embedder-worker.mjs` — embeddings e5-base en worker thread.
-- `scrape.mjs` — scrape ganprevoyance.fr (sitemap ou crawl) → `kb_chunks`.
+- `scrape.mjs` — scrape ganprevoyance.fr (sitemap ou crawl) → `kb_chunks`. **Nettoyage
+  2 passes** : retrait nav/header/footer/menu/cookie par sélecteur (mais PAS `<form>`) +
+  filtre boilerplate par **fréquence inter-pages** (ligne sur ≥20% des pages = gabarit,
+  virée) + blocklist CTA. `SCRAPE_BOILER_RATIO` règle le seuil.
 - `embed.mjs` — vectorise les chunks. `setup-db.mjs` — applique `schema.sql`.
 - `chat-cli.mjs` — REPL de test local.
 
