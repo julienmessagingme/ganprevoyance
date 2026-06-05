@@ -285,25 +285,43 @@ async function processMessage(externalId, userText) {
 // Résumé de la conversation pour le conseiller qui va rappeler le client.
 // Factuel, sans formule de politesse, sans engagement.
 async function summarizeForAdvisor(messages) {
+  const userMsgs = messages
+    .filter((m) => m.role === "user" && typeof m.content === "string" && m.content.trim() && !m.content.startsWith("[Système]"))
+    .map((m) => m.content.trim());
   const transcript = messages
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim() && !m.content.startsWith("[Système]"))
     .map((m) => `${m.role === "user" ? "Client" : "Assistant"}: ${m.content.trim()}`)
     .join("\n");
-  if (!transcript) return null;
 
-  const completion = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [
-      {
-        role: "system",
-        content:
-          "Tu produis, pour un conseiller Gan Prévoyance qui va rappeler ce client, un résumé FACTUEL et concis (3 à 5 phrases) de l'échange du client avec l'assistant IA. Indique le sujet principal et ce que le client cherche / son contexte. Pas de formule de politesse, pas d'engagement, pas de recommandation d'action. Français.",
-      },
-      { role: "user", content: `Échange à résumer :\n\n${transcript}` },
-    ],
-    temperature: 0.2,
-  });
-  return (completion.choices[0].message.content || "").trim() || null;
+  // Repli déterministe : toujours une note utile, même si l'échange est très court.
+  const fallback =
+    "Le client souhaite être mis en relation avec un conseiller." +
+    (userMsgs.length ? ` Messages du client : ${userMsgs.map((m) => `« ${m} »`).join(" ; ")}` : "");
+
+  if (!transcript) return fallback;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu rédiges une NOTE DE TRANSMISSION courte (2 à 4 phrases) pour un conseiller Gan Prévoyance qui va rappeler ce client. Indique le sujet / la demande et le contexte utile. Factuel, sans formule de politesse, sans engagement. Même si l'échange est bref, produis une note exploitable : n'écris JAMAIS qu'il n'y a rien à résumer. Français.",
+        },
+        { role: "user", content: `Échange client / assistant IA à transmettre :\n\n${transcript}` },
+      ],
+      temperature: 0.2,
+    });
+    const out = (completion.choices[0].message.content || "").replace(/\*\*/g, "").trim();
+    // Si le modèle botte en touche (échange trop court), on prend le repli.
+    if (!out || /rien à résumer|pas (eu )?de contenu|aucun contenu|n'y a pas (eu )?de contenu/i.test(out)) {
+      return fallback;
+    }
+    return out;
+  } catch {
+    return fallback;
+  }
 }
 
 // ── Heuristiques de détection (garde-fous d'entrée) ────────────────────────
