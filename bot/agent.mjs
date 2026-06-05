@@ -158,8 +158,21 @@ async function processMessage(externalId, userText) {
   });
 
   const turns = (conv.turns || 0) + 1;
-  const isFirstTurn = turns === 1;
   const messages = pruneHistory(Array.isArray(conv.messages) ? conv.messages : []);
+
+  // Mention IA obligatoire (conformité) : on l'envoie quand l'IA n'a encore JAMAIS
+  // parlé dans cette conversation, OU quand le client revient après une coupure
+  // (nouvelle session). Robuste, indépendant du compteur `turns` (qui peut être
+  // > 1 sur une conversation pré-existante sans que l'intro ait été envoyée).
+  const hadAssistant = messages.some((m) => m.role === "assistant");
+  let gapMs = Infinity;
+  if (conv.updated_at) {
+    const t = new Date(conv.updated_at).getTime();
+    if (Number.isFinite(t)) gapMs = Date.now() - t;
+  }
+  const SESSION_GAP_MS = Number(env.SESSION_GAP_HOURS || 6) * 3_600_000;
+  const showIntro = !hadAssistant || gapMs > SESSION_GAP_MS;
+
   messages.push({ role: "user", content: userText });
 
   // Garde-fous CODE de conformité : si la demande touche un contrat précis / un
@@ -256,7 +269,7 @@ async function processMessage(externalId, userText) {
 
   // 4. Construire les sorties. Mention IA EN DUR au 1er tour (conformité).
   const outbound = [];
-  if (isFirstTurn) outbound.push({ type: "text", text: INTRO });
+  if (showIntro) outbound.push({ type: "text", text: INTRO });
   if (escalate && helpNodeEnabled) {
     // Le node de transfert envoie lui-même le message de confirmation -> on ne
     // double pas avec le texte du modèle.
