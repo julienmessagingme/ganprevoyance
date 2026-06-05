@@ -42,8 +42,19 @@ Travail en cours. Quand une entrée est terminée → `features.md` ou supprimé
       + node déclenché) sur un vrai abonné.
 - [ ] Enrichir les cas de tests (gestion, délais, prestations, SRC, réclamations).
 
+## KB unifiée — onglet "Base de connaissance" alimente le bot (FAIT)
+- [x] L'onglet du dashboard pousse maintenant vers la **KB du bot** (pgvector) via
+      l'API `/kb/upsert` `/kb/delete` du bot (auth secret). Q&R, texte libre, import
+      Excel, édition et suppression sont câblés (`bot-kb.ts` + accroches dans les routes).
+- [x] Testé E2E : créer une Q&R dans l'onglet → atterrit dans `kb_chunks` (embeddé) ;
+      supprimer → retiré du bot. Conteneur dashboard atteint le bot via `172.18.0.1:8130`.
+- [ ] **Fichiers PDF/Word uploadés dans l'onglet** : pas encore poussés au bot (leur
+      contenu n'est parsé que par OpenAI). À ajouter (extraction texte côté dashboard).
+- [ ] **OpenAI vector store `vs_6a21...`** : encore alimenté en double-écriture (résidu
+      du module cloné de Neoma, jamais lu par le bot). À retirer complètement quand on
+      voudra zéro OpenAI (nécessite de sortir OpenAI des routes knowledge + gérer le
+      statut + les uploads fichiers).
+
 ## Points ouverts
-- Bot et dashboard ont 2 bases de connaissance distinctes (bot = pgvector scrapé ;
-  dashboard = vector store OpenAI `vs_6a21...`). Unification possible plus tard.
 - Re-scrape périodique du site à prévoir (cron) pour garder la KB du bot à jour.
 - Connexion bot DB via pooler eu-central-1 (le direct IPv6 ne passe pas).
