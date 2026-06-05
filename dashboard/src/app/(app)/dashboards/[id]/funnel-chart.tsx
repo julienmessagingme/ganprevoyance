@@ -154,7 +154,7 @@ export function FunnelChart({ steps: rawSteps }: { steps: ComputedStep[] }) {
             animationType="grow"
           />
         ))}
-        <BarXAxis showAllLabels tickerHalfWidth={70} />
+        <BarXAxis showAllLabels tickerHalfWidth={70} wrap />
         <ChartTooltip
           showDots={false}
           rows={(point) => {

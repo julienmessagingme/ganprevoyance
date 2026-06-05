@@ -787,14 +787,24 @@ export interface BarXAxisProps {
   tickerHalfWidth?: number;
   showAllLabels?: boolean;
   maxLabels?: number;
+  /** Autorise le retour à la ligne des libellés (au lieu de `nowrap`).
+   *  Chaque libellé est contraint à `labelWidth` (défaut = largeur de la barre)
+   *  et centré sous sa colonne, clampé à 3 lignes. Utile quand il y a beaucoup
+   *  de colonnes à libellés longs (custom events à noms longs). */
+  wrap?: boolean;
+  /** Largeur (px) d'un libellé en mode `wrap`. Défaut : largeur de la barre. */
+  labelWidth?: number;
 }
 
 export function BarXAxis({
   tickerHalfWidth = 50,
   showAllLabels = false,
   maxLabels = 12,
+  wrap = false,
+  labelWidth,
 }: BarXAxisProps) {
   const { xScale, margin, tooltipData, containerRef, bandWidth } = useChart();
+  const resolvedLabelWidth = labelWidth ?? Math.max(bandWidth, 48);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -857,7 +867,12 @@ export function BarXAxis({
           >
             <motion.span
               animate={{ opacity }}
-              className="whitespace-nowrap text-chart-label text-xs"
+              className={
+                wrap
+                  ? "text-center text-chart-label text-[10px] leading-tight line-clamp-3 break-words"
+                  : "whitespace-nowrap text-chart-label text-xs"
+              }
+              style={wrap ? { width: resolvedLabelWidth } : undefined}
               initial={{ opacity: 1 }}
               transition={{ duration: 0.4, ease: "easeInOut" }}
             >
