@@ -124,7 +124,7 @@ export function AdminClient({ meId }: { meId: string }) {
                     <div className="flex flex-wrap gap-1 mt-1">
                       {u.schools.length === 0 ? (
                         <span className="text-xs text-zinc-400 italic">
-                          Aucune école assignée
+                          Aucun domaine assigné
                         </span>
                       ) : (
                         u.schools.slice(0, 6).map((s) => {

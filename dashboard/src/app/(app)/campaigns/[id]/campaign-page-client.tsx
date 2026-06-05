@@ -152,7 +152,7 @@ export function CampaignPageClient({ campaignId }: { campaignId: string }) {
             className="h-4 w-4"
           />
           <Label htmlFor="shared-toggle" className="cursor-pointer text-sm">
-            Partagée avec l&apos;école
+            Partagée avec le domaine
           </Label>
           <span className="text-xs text-zinc-500">
             {campaign.is_shared

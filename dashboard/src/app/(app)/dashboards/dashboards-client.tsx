@@ -57,7 +57,7 @@ export function DashboardsClient() {
         <p className="text-zinc-500">Chargement…</p>
       ) : dashboards.length === 0 ? (
         <p className="text-zinc-500">
-          Aucun tableau pour cette école. Cliquez sur « + Nouveau funnel ».
+          Aucun tableau pour ce domaine. Cliquez sur « + Nouveau funnel ».
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

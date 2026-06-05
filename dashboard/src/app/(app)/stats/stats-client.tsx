@@ -149,7 +149,7 @@ export function StatsClient() {
           <p className="text-zinc-500">Chargement…</p>
         ) : events.length === 0 ? (
           <p className="text-zinc-500">
-            Aucun custom event pour cette école. Lancez un sync via le bouton ⟳ en bas de page.
+            Aucun custom event pour ce domaine. Lancez un sync via le bouton ⟳ en bas de page.
           </p>
         ) : (
           <Accordion multiple className="space-y-2">
@@ -171,7 +171,7 @@ export function StatsClient() {
           <p className="text-zinc-500">Chargement…</p>
         ) : redirects.length === 0 ? (
           <p className="text-zinc-500">
-            Aucune URL trackée pour cette école. Créez-en une dans l&apos;onglet URLs.
+            Aucune URL trackée pour ce domaine. Créez-en une dans l&apos;onglet URLs.
           </p>
         ) : (
           <Accordion multiple className="space-y-2">

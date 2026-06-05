@@ -216,7 +216,7 @@ export function UserDialog({ mode, user, onClose, onSaved }: Props) {
           </div>
 
           <div className="space-y-1">
-            <Label>Écoles accessibles</Label>
+            <Label>Domaines accessibles</Label>
             <div className="grid grid-cols-2 gap-1.5 border rounded p-2 max-h-56 overflow-auto">
               {SCHOOLS.map((s) => (
                 <label key={s.slug} className="flex items-center gap-2 text-sm">

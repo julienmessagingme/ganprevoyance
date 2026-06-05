@@ -64,7 +64,7 @@ export function CampaignsClient() {
         <p className="text-zinc-500">Chargement…</p>
       ) : campaigns.length === 0 ? (
         <p className="text-zinc-500">
-          Aucune campagne pour cette école. Cliquez sur « + Nouvelle campagne ».
+          Aucune campagne pour ce domaine. Cliquez sur « + Nouvelle campagne ».
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

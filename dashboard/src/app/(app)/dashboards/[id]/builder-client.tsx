@@ -718,7 +718,7 @@ export function BuilderClient({
                       }}
                       className="h-3.5 w-3.5"
                     />
-                    Partagé avec l&apos;école
+                    Partagé avec le domaine
                   </label>
                 )}
                 {dashboard.can_edit === false && (
@@ -875,7 +875,7 @@ export function BuilderClient({
                     ? isCampaignMode
                       ? "Aucune brique dans cette campagne. Cliquez sur « Modifier les briques »."
                       : "Cette campagne ne contient aucune brique."
-                    : "Aucun event disponible pour cette école."}
+                    : "Aucun event disponible pour ce domaine."}
                 </p>
               )}
           </aside>

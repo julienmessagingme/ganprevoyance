@@ -87,11 +87,11 @@ export function NewDashboardDialog({
               className="h-4 w-4"
             />
             <Label htmlFor="dashboard-shared" className="cursor-pointer">
-              Partagé avec l&apos;école
+              Partagé avec le domaine
             </Label>
             <span className="text-xs text-zinc-500">
               {isShared
-                ? "Visible par tous les utilisateurs de l'école"
+                ? "Visible par tous les utilisateurs du domaine"
                 : "Visible uniquement par vous"}
             </span>
           </div>

@@ -38,11 +38,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
   }
 
-  // Best-effort update of last_login_at — failure shouldn't block login.
-  void sb
-    .from("users")
-    .update({ last_login_at: new Date().toISOString() })
-    .eq("id", user.id);
+  // Met à jour last_login_at. À AWAITER impérativement : les requêtes
+  // supabase-js sont paresseuses (elles ne partent que sur .then()/await) ; un
+  // `void` non awaité ne déclenche jamais la requête → la date restait à null.
+  try {
+    await sb
+      .from("users")
+      .update({ last_login_at: new Date().toISOString() })
+      .eq("id", user.id);
+  } catch {
+    // best-effort : un échec ici ne doit pas bloquer la connexion
+  }
 
   const token = await signSession({ userId: user.id, email: user.email });
   const res = NextResponse.json({

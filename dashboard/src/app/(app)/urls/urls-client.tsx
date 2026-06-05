@@ -107,7 +107,7 @@ export function UrlsClient({ publicBaseUrl }: { publicBaseUrl: string }) {
         <p className="text-zinc-500">Chargement…</p>
       ) : events.length === 0 ? (
         <p className="text-zinc-500">
-          Aucune URL pour cette école. Cliquez sur « + Nouvel événement ».
+          Aucune URL pour ce domaine. Cliquez sur « + Nouvel événement ».
         </p>
       ) : (
         <div className="space-y-3">

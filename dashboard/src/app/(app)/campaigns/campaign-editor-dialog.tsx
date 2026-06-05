@@ -290,7 +290,7 @@ export function CampaignEditorDialog({
                 className="h-4 w-4"
               />
               <Label htmlFor="campaign-shared" className="cursor-pointer">
-                Partagée avec l&apos;école
+                Partagée avec le domaine
               </Label>
               <span className="text-xs text-zinc-500">
                 {isShared ? "Visible par tous" : "Visible uniquement par vous"}
