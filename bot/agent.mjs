@@ -231,7 +231,9 @@ async function processMessage(externalId, userText) {
           const args = JSON.parse(tc.function.arguments || "{}");
           if (tc.function.name === "demander_conseiller") {
             escalate = true;
-            console.log(`[escalade] ${externalId} :: ${args.raison || "(sans raison)"}`);
+            // On ne logge PAS args.raison : il peut contenir une donnée de santé /
+            // sensible (RGPD). Log minimal.
+            console.log(`[escalade] ${externalId} -> conseiller`);
             result = { ok: true, message: "Mise en relation déclenchée." };
           } else {
             result = { erreur: `outil inconnu: ${tc.function.name}` };
@@ -285,18 +287,14 @@ async function processMessage(externalId, userText) {
 // Résumé de la conversation pour le conseiller qui va rappeler le client.
 // Factuel, sans formule de politesse, sans engagement.
 async function summarizeForAdvisor(messages) {
-  const userMsgs = messages
-    .filter((m) => m.role === "user" && typeof m.content === "string" && m.content.trim() && !m.content.startsWith("[Système]"))
-    .map((m) => m.content.trim());
   const transcript = messages
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim() && !m.content.startsWith("[Système]"))
     .map((m) => `${m.role === "user" ? "Client" : "Assistant"}: ${m.content.trim()}`)
     .join("\n");
 
-  // Repli déterministe : toujours une note utile, même si l'échange est très court.
-  const fallback =
-    "Le client souhaite être mis en relation avec un conseiller." +
-    (userMsgs.length ? ` Messages du client : ${userMsgs.map((m) => `« ${m} »`).join(" ; ")}` : "");
+  // Repli SANS verbatim : les messages du client peuvent contenir des données de
+  // santé / sensibles qu'on ne doit JAMAIS transmettre. On reste générique.
+  const fallback = "Le client souhaite être mis en relation avec un conseiller Gan Prévoyance.";
 
   if (!transcript) return fallback;
 
@@ -307,9 +305,11 @@ async function summarizeForAdvisor(messages) {
         {
           role: "system",
           content:
-            "Tu rédiges une NOTE DE TRANSMISSION courte (2 à 4 phrases) pour un conseiller Gan Prévoyance qui va rappeler ce client. Indique le sujet / la demande et le contexte utile. Factuel, sans formule de politesse, sans engagement. Même si l'échange est bref, produis une note exploitable : n'écris JAMAIS qu'il n'y a rien à résumer. Français.",
+            "Tu rédiges une NOTE DE TRANSMISSION courte (2 à 4 phrases) pour un conseiller Gan Prévoyance qui va rappeler ce client. Indique le SUJET et la nature de la demande, de façon factuelle et synthétique.\n\n" +
+            "RGPD / CONFIDENTIALITÉ (impératif) : n'inclus JAMAIS de données de santé ou médicales (pathologie, symptômes, traitement, diagnostic, état de santé, handicap...) ni aucune autre donnée personnelle sensible (situation familiale détaillée, données bancaires, etc.). Si le client a mentionné de telles informations, NE les reproduis sous AUCUNE forme : reste sur le motif général (ex. « question liée à sa complémentaire santé », « demande personnelle sur son contrat »).\n\n" +
+            "Ne cite pas le client mot à mot. Pas de formule de politesse, pas d'engagement. Même si l'échange est bref, produis une note exploitable ; n'écris jamais qu'il n'y a rien à résumer. Français.",
         },
-        { role: "user", content: `Échange client / assistant IA à transmettre :\n\n${transcript}` },
+        { role: "user", content: `Échange client / assistant IA à transmettre (résume le motif, SANS recopier de données de santé ni de détails personnels sensibles) :\n\n${transcript}` },
       ],
       temperature: 0.2,
     });
