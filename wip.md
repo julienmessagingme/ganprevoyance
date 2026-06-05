@@ -32,14 +32,15 @@ Travail en cours. Quand une entrée est terminée → `features.md` ou supprimé
 - [x] FAQ "Relevé de situation" ajoutée à la KB (6 chunks). Ingestion docx réutilisable
       (`npm run ingest-docx -- "<chemin.docx>"` puis `npm run embed`).
 
-### ⛔ BOT MUET (NO_SEND=1) — en attente de feu vert
-- Le bot traite mais **ne renvoie rien** (choix B de Julien), le temps de la
-  **validation conformité** du nouveau discours. Pour ouvrir : sur le VPS, mettre
-  `NO_SEND=0` dans `bot/.env` + `pm2 restart ganprevoyance --update-env`.
-- Clé Gemini `AQ.…` fournie par Julien : fonctionne (le cerveau disait à tort qu'elle
-  expirait, cf. LEARNINGS 2026-06-05). On ne swappe que si elle 401 à l'usage.
-- [ ] À faire après ouverture : tester une vraie escalade (résumé écrit dans le field
-      + node déclenché) sur un vrai abonné.
+### ✅ BOT EN PRODUCTION (NO_SEND=0, ouvert à tous)
+- Le bot répond aux vrais clients WhatsApp (workspace 291825). `/health` OK.
+- Garde-fou dispo si besoin de re-restreindre : `SEND_ALLOWLIST=<user_ns,...>` dans
+  `bot/.env` (ne répond qu'à ces contacts) ; `NO_SEND=1` pour couper tout envoi.
+- Clé Gemini `AQ.…` : fonctionne (le cerveau disait à tort qu'elle expirait, cf.
+  LEARNINGS 2026-06-05). On ne swappe que si elle 401 à l'usage.
+- [ ] Surveiller une vraie escalade (résumé écrit dans le field + node déclenché) :
+      si le flow du contact diffère (f265919) du flow du node/field (f266213), scope
+      MM à vérifier.
 - [ ] Enrichir les cas de tests (gestion, délais, prestations, SRC, réclamations).
 
 ## Onglet "Base de connaissance" = gestionnaire de la KB du bot (FAIT, OpenAI sorti)
