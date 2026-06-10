@@ -36,7 +36,7 @@ function chunkText(text) {
  * Remplace tous les chunks de cette source, ré-embed, écrit.
  * @returns {Promise<{chunks:number}>}
  */
-export async function upsertKbSource({ sourceId, title = null, kind = "manual", content = "" }) {
+export async function upsertKbSource({ sourceId, title = null, kind = "manuel", content = "" }) {
   if (!sourceId) throw new Error("sourceId requis");
   const url = sourceUrl(sourceId);
   const chunks = chunkText(content);
@@ -48,16 +48,7 @@ export async function upsertKbSource({ sourceId, title = null, kind = "manual", 
   }
 
   const now = new Date().toISOString();
-  await withDb(async (client) => {
-    await client.query("delete from kb_chunks where url = $1", [url]);
-    for (let i = 0; i < chunks.length; i++) {
-      await client.query(
-        `insert into kb_chunks (url, title, section, kind, chunk_index, content, embedding, scraped_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [url, title, null, kind, i, chunks[i], vectors[i], now]
-      );
-    }
-  });
+  await replaceChunks(url, title, kind, chunks, vectors, now);
   return { chunks: chunks.length };
 }
 
@@ -155,17 +146,31 @@ export async function upsertKbByUrl({ url, title = null, kind = "manuel", conten
     vectors.push(toPgVector(await embed([title, c].filter(Boolean).join("\n"), "passage")));
   }
   const now = new Date().toISOString();
+  await replaceChunks(url, title, kind, chunks, vectors, now);
+  return { chunks: chunks.length };
+}
+
+// Remplace ATOMIQUEMENT tous les chunks d'une url : delete + insert dans UNE
+// transaction. Sans ça, une erreur (ou une connexion pooler coupée) entre le
+// delete et la fin des insert laisse la source vidée ou partielle = perte de KB.
+async function replaceChunks(url, title, kind, chunks, vectors, now) {
   await withDb(async (client) => {
-    await client.query("delete from kb_chunks where url = $1", [url]);
-    for (let i = 0; i < chunks.length; i++) {
-      await client.query(
-        `insert into kb_chunks (url, title, section, kind, chunk_index, content, embedding, scraped_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [url, title, null, kind, i, chunks[i], vectors[i], now]
-      );
+    try {
+      await client.query("begin");
+      await client.query("delete from kb_chunks where url = $1", [url]);
+      for (let i = 0; i < chunks.length; i++) {
+        await client.query(
+          `insert into kb_chunks (url, title, section, kind, chunk_index, content, embedding, scraped_at)
+           values ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [url, title, null, kind, i, chunks[i], vectors[i], now]
+        );
+      }
+      await client.query("commit");
+    } catch (e) {
+      await client.query("rollback").catch(() => {});
+      throw e;
     }
   });
-  return { chunks: chunks.length };
 }
 
 /** Supprime une source par URL directe. */
