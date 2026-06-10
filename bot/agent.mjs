@@ -194,21 +194,16 @@ async function processMessage(externalId, userText) {
 
   messages.push({ role: "user", content: userText });
 
-  // Garde-fous CODE de conformité : si la demande touche un contrat précis / un
-  // acte de gestion / une réclamation, on rappelle au modèle la conduite à tenir
-  // AVANT qu'il réponde (réactif > règle statique lointaine).
+  // Garde-fou CODE de conformité : rappel contextuel pour CE tour, injecté dans le
+  // SYSTEM (pas dans l'historique persisté) — évite le replay de vieux rappels et
+  // le spoofing d'un faux "[Système]" tapé par l'utilisateur.
+  let reminder = "";
   if (looksLikeIndividualOrEngaging(userText)) {
-    messages.push({
-      role: "user",
-      content:
-        "[Système] La demande semble porter sur un contrat précis ou un acte de gestion. Rappel impératif : tu ne renseignes pas sur un dossier précis, tu n'agis pas, tu ne prends pas position sur la faisabilité ; indique-le et propose, si le client le souhaite, un conseiller.",
-    });
+    reminder =
+      "\n\nRAPPEL (tour courant) : la demande semble porter sur un contrat précis ou un acte de gestion. Tu ne renseignes pas sur un dossier précis, tu n'agis pas, tu ne prends pas position sur la faisabilité ; indique-le et propose, si le client le souhaite, un conseiller.";
   } else if (looksLikeComplaint(userText)) {
-    messages.push({
-      role: "user",
-      content:
-        "[Système] Le client exprime du mécontentement. Rappel impératif : empathie sobre, AUCUNE reconnaissance de faute ou d'erreur, AUCUN engagement ni promesse, puis propose rapidement la mise en relation avec un conseiller.",
-    });
+    reminder =
+      "\n\nRAPPEL (tour courant) : le client exprime du mécontentement. Empathie sobre, AUCUNE reconnaissance de faute ou d'erreur, AUCUN engagement ni promesse, puis propose rapidement la mise en relation avec un conseiller.";
   }
 
   // Indice de mécontentement : scoring lancé EN PARALLÈLE (heuristique + LLM),
@@ -229,7 +224,7 @@ async function processMessage(externalId, userText) {
   } catch (e) {
     console.error(`[kb] échec recherche ${externalId}:`, e.message);
   }
-  const systemContent = SYSTEM + kbContext;
+  const systemContent = SYSTEM + reminder + kbContext;
 
   let escalate = false;
   let textReply = "Je n'ai pas réussi à traiter votre demande. Pouvez-vous la reformuler ?";
@@ -251,7 +246,6 @@ async function processMessage(externalId, userText) {
       for (const tc of assistantMsg.tool_calls) {
         let result;
         try {
-          const args = JSON.parse(tc.function.arguments || "{}");
           if (tc.function.name === "demander_conseiller") {
             escalate = true;
             // On ne logge PAS args.raison : il peut contenir une donnée de santé /
@@ -379,7 +373,9 @@ function heuristicFrustration(text) {
   const raw = String(text || "");
   const t = raw.toLowerCase();
   let s = 0;
-  if (/résili|resili|porter plainte|\bplainte\b|médiateur|mediateur|avocat|tribunal|signaler|dénonc|denonc/.test(t)) s = Math.max(s, 78);
+  // Menaces réelles uniquement. PAS "résilier" : c'est une intention d'acte (gérée
+  // par l'escalade), pas du mécontentement — sinon fausse alerte sur une demande calme.
+  if (/porter plainte|\bplainte\b|médiateur|mediateur|\bavocat\b|tribunal|assignation|dénonc|denonc/.test(t)) s = Math.max(s, 78);
   if (/scandaleux|inadmissible|inacceptable|honteux|\bhonte\b|lamentable|arnaque|escroc|incompétent|incompetent|catastrophe/.test(t)) s = Math.max(s, 70);
   if (/mécontent|mecontent|insatisf|très déçu|tres decu|déçu|decu|en colère|colere|ras[- ]le[- ]bol|j'en ai marre|marre de/.test(t)) s = Math.max(s, 55);
   if (/toujours pas|ça (ne )?marche pas|ca (ne )?marche pas|rien compris|déjà dit|deja dit|je répète|je repete|encore une fois|sert? à rien|aucune réponse|aucune reponse/.test(t)) s = Math.max(s, 42);
@@ -407,7 +403,10 @@ async function scoreFrustrationLLM(contextText, userText) {
     ],
     temperature: 0,
   });
-  const n = parseInt((completion.choices[0].message.content || "").replace(/[^0-9]/g, ""), 10);
+  // On extrait le PREMIER nombre (1-3 chiffres) — surtout pas concaténer tous les
+  // chiffres : "0/100" donnerait 100 et déclencherait une fausse alerte.
+  const m = (completion.choices[0].message.content || "").match(/\d{1,3}/);
+  const n = m ? parseInt(m[0], 10) : 0;
   return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
 }
 
