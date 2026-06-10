@@ -57,7 +57,7 @@ npm start            # serveur webhook (port 8130)
   IA** (conformité Groupe), répond depuis la KB en **RAG DÉTERMINISTE** (recherche
   injectée en dur dans le system, PAS via un outil — Gemini n'appelle pas l'outil de
   façon fiable). Seul outil = `demander_conseiller` (escalade, sur demande/cas personnel).
-- **Escalade conseiller** : node `MM_HELP_NODE_NS=f266213n450294737` + résumé de la
+- **Escalade conseiller** : node `MM_HELP_NODE_NS=f266213n450294757` + résumé de la
   conversation écrit dans le user field `MM_SUMMARY_FIELD_NS=f266213v13539241` (set par var_ns).
 - **KB du bot = source UNIQUE** (`kb_chunks` pgvector, projet dédié). L'onglet "Base de
   connaissance" du dashboard la PILOTE via l'API bot `/kb/list|get|upsert|delete`

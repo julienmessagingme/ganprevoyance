@@ -107,7 +107,7 @@ Connexion Postgres **directe** (`pg`), pgvector. Tables : `kb_chunks`
 `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_DB_HOST`/`_USER`/`_PORT` (pooler `aws-1-eu-central-1`,
 le direct IPv6 ne passe pas), `LLM_PROVIDER`, `LLM_MODEL`, `GEMINI_API_KEY`,
 `WEBHOOK_SECRET` (= `BOT_KB_SECRET` côté dashboard), `PORT` (8130), `HOST` (VPS: 172.18.0.1),
-`MM_API_BASE`, `MM_API_TOKEN`, `MM_HELP_NODE_NS` (f266213n450294737),
+`MM_API_BASE`, `MM_API_TOKEN`, `MM_HELP_NODE_NS` (f266213n450294757),
 `MM_SUMMARY_FIELD_NS` (f266213v13539241), `SESSION_GAP_HOURS` (re-affichage mention IA),
 `MAX_CONCURRENCY`, `SEND_ALLOWLIST` (test : ne répondre qu'à ces user_ns), `NO_SEND`
 (0 = prod, 1 = muet).
