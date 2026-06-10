@@ -57,12 +57,21 @@ npm start            # serveur webhook (port 8130)
   IA** (conformité Groupe), répond depuis la KB en **RAG DÉTERMINISTE** (recherche
   injectée en dur dans le system, PAS via un outil — Gemini n'appelle pas l'outil de
   façon fiable). Seul outil = `demander_conseiller` (escalade, sur demande/cas personnel).
-- **Escalade conseiller** : node `MM_HELP_NODE_NS=f266213n450294757` + résumé de la
-  conversation écrit dans le user field `MM_SUMMARY_FIELD_NS=f266213v13539241` (set par var_ns).
+- **Escalade conseiller** : node `MM_HELP_NODE_NS=f266213n450294757` + **résumé de la
+  conversation FILTRÉ RGPD** (jamais de données de santé/sensibles, pas de verbatim) écrit
+  dans le user field `MM_SUMMARY_FIELD_NS=f266213v13539241` (set par var_ns). Une réponse
+  affirmative ("ok merci", "oui") vaut acceptation ; après acceptation, aucune re-proposition
+  ni closing creux ("n'hésitez pas...").
+- **Indice de mécontentement** : score lissé 0-100 (heuristique + LLM) par conversation ;
+  au seuil `DISCONTENT_THRESHOLD` (65, moyen), déclenche UNE fois le node
+  `MM_DISCONTENT_NODE_NS=f266213n450834377`. Pas d'auto-escalade.
+- **Rétention RGPD** : purge des conversations inactives > `CONV_RETENTION_DAYS` (30 j),
+  au boot + 1×/jour (`purge-conv.mjs`). Les messages peuvent contenir des données de santé.
 - **KB du bot = source UNIQUE** (`kb_chunks` pgvector, projet dédié). L'onglet "Base de
   connaissance" du dashboard la PILOTE via l'API bot `/kb/list|get|upsert|delete`
   (lib `bot-kb.ts`, env `BOT_KB_URL`/`BOT_KB_SECRET`). **OpenAI entièrement retiré.**
-  Recherche plein-texte via `/kb/list?q=`. Ajout de docs : `npm run ingest-docx`.
+  Recherche du bot = **HYBRIDE** (sémantique pgvector + mots-clés ILIKE) pour fiabiliser
+  le factuel. Recherche dans l'onglet via `/kb/list?q=`. Ajout de docs : `npm run ingest-docx`.
 - **Prod / test** : bot en prod (`NO_SEND=0`). `SEND_ALLOWLIST=<user_ns,…>` = ne répondre
   qu'à certains contacts (test sans diffuser) ; `NO_SEND=1` = couper tout envoi.
 - **Landing dashboard** : `/` redirige vers `/knowledge` (Base de connaissance).

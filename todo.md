@@ -10,9 +10,9 @@ en cours est dans `wip.md`.
   ou `npm run ingest-docx` côté bot pour les .docx.
 
 ## Améliorations
+- Mécontentement : option d'**auto-escalade conseiller** au seuil (aujourd'hui : juste le node).
+- Vue **"conversations à risque"** dans le dashboard à partir de `discontent_score` (matrice sentiment).
 - Re-scrape périodique automatique de ganprevoyance.fr (cron) pour garder la KB du bot à jour.
-- Recherche hybride bot (trigram + embedding) si des questions à mots-clés/typos
-  ressortent mal en pur sémantique.
 - Page "santé" du sync custom events dans le dashboard (dernier run, volumétrie par event).
 - Throttle/handoff bot : configurer `MM_OVERFLOW_NODE_NS` si le budget MM se tend.
 - Cleanup : retirer les vars `OPENAI_*` des `.env` (plus utilisées, module OpenAI retiré).

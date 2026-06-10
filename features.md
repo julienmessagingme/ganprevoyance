@@ -36,5 +36,9 @@ Gemini 2.5, à partir de la base de connaissance Gan Prévoyance. **En productio
 - **Garde-fou assurance** — oriente sans décider, n'invente jamais montants/garanties/
   délais ; pour tout cas personnel (contrat, sinistre) ou réclamation, propose un
   conseiller (sans reconnaître de faute ni s'engager). Statut : live.
-- **Escalade conseiller** — sur demande du client, met en relation avec un conseiller
-  (node MM) et transmet un **résumé de la conversation** au conseiller. Statut : live.
+- **Escalade conseiller** — sur demande du client (ou son acceptation), met en relation
+  avec un conseiller et transmet un **résumé de la conversation** au conseiller. Le résumé
+  est **filtré RGPD** (aucune donnée de santé/sensible). Statut : live.
+- **Détection de mécontentement** — un indice de frustration est calculé en continu ;
+  au-delà d'un seuil, une alerte (node MM) est déclenchée automatiquement. Statut : live.
+- **Confidentialité** — les conversations sont purgées après 30 jours d'inactivité.

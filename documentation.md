@@ -79,15 +79,24 @@ Inspiré d'**Odalys**, adapté à l'assurance (Q&A texte, pas de cartes), Gemini
 - `agent.mjs` — agent **conforme** : system prompt assurance (oriente sans décider),
   **mention IA en dur au 1er message IA ou nouvelle session** (gap > `SESSION_GAP_HOURS`),
   **RAG DÉTERMINISTE** (recherche KB injectée dans le system, PAS via un outil), 1 seul
-  outil `demander_conseiller` (escalade → génère un résumé conv + déclenche le node),
-  garde-fous code (détection contrat précis / réclamation), sérialisation par user, historique borné.
+  outil `demander_conseiller` (escalade → génère un **résumé conv FILTRÉ RGPD** sans
+  données de santé/sensibles + déclenche le node), garde-fous code (détection contrat
+  précis / réclamation), reformulation FIDÈLE sans prise de parti (« je comprends QUE
+  vous souhaitez X »), pas de closing creux, sérialisation par user, historique borné.
+  **Indice de mécontentement** : score lissé 0-100 (heuristique mots-clés + score LLM en
+  parallèle), au seuil `DISCONTENT_THRESHOLD` déclenche UNE fois `MM_DISCONTENT_NODE_NS`.
 - `kb-ingest.mjs` — chunk + embed e5 + upsert/delete/list/get sur `kb_chunks` (utilisé par l'API `/kb/*`).
 - `ingest-docx.mjs` — ingère un `.docx` (mammoth) dans la KB (`npm run ingest-docx -- "<path>"`).
-- `search.mjs` — recherche sémantique pgvector sur `kb_chunks`.
+- `search.mjs` — recherche **HYBRIDE** : sémantique pgvector + mots-clés ILIKE
+  fusionnés (les chunks contenant littéralement les termes demandés passent en tête).
+  Fiabilise les questions factuelles courtes (numéro, horaires) que l'embedding seul rate.
+- `purge-conv.mjs` — purge RGPD des conversations inactives > `CONV_RETENTION_DAYS` (30 j),
+  appelée au boot + 1×/jour par `server.mjs` (aussi lançable : `node purge-conv.mjs`).
 - `db.mjs` — pool `pg` (connexion directe `db.<ref>` ou pooler via overrides env).
 - `mmclient.mjs` — client MM : rate-limit piloté par headers UChat (1000/h), `sendText`,
   escalade conseiller (écrit le résumé conv dans le user field par `var_ns` via
-  `set-user-field`, PUIS déclenche le node de transfert), handoff.
+  `set-user-field`, PUIS déclenche le node de transfert), node mécontentement
+  (`sendDiscontentNode`), handoff.
 - `embedder.mjs` / `embedder-worker.mjs` — embeddings e5-base en worker thread.
 - `scrape.mjs` — scrape ganprevoyance.fr (sitemap ou crawl) → `kb_chunks`. **Nettoyage
   2 passes** : retrait nav/header/footer/menu/cookie par sélecteur (mais PAS `<form>`) +
@@ -99,7 +108,8 @@ Inspiré d'**Odalys**, adapté à l'assurance (Q&A texte, pas de cartes), Gemini
 ### Base de données (projet Supabase dédié `etmdddhgikihybjufqwq`)
 Connexion Postgres **directe** (`pg`), pgvector. Tables : `kb_chunks`
 (url, title, section, kind, chunk_index, content, embedding vector(768)),
-`conversations` (external_id, messages jsonb, turns). Fonction `match_kb`.
+`conversations` (external_id, messages jsonb, turns, discontent_score, discontent_alerted).
+Fonction `match_kb`. Purge des conversations inactives > 30 j (RGPD).
 > Le MCP Supabase n'a pas accès à ce projet (autre org) → setup via `setup-db.mjs`.
 
 ### Variables d'env (`bot/.env`, gitignored)
@@ -107,8 +117,10 @@ Connexion Postgres **directe** (`pg`), pgvector. Tables : `kb_chunks`
 `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_DB_HOST`/`_USER`/`_PORT` (pooler `aws-1-eu-central-1`,
 le direct IPv6 ne passe pas), `LLM_PROVIDER`, `LLM_MODEL`, `GEMINI_API_KEY`,
 `WEBHOOK_SECRET` (= `BOT_KB_SECRET` côté dashboard), `PORT` (8130), `HOST` (VPS: 172.18.0.1),
-`MM_API_BASE`, `MM_API_TOKEN`, `MM_HELP_NODE_NS` (f266213n450294757),
-`MM_SUMMARY_FIELD_NS` (f266213v13539241), `SESSION_GAP_HOURS` (re-affichage mention IA),
+`MM_API_BASE`, `MM_API_TOKEN`, `MM_HELP_NODE_NS` (escalade, f266213n450294757),
+`MM_SUMMARY_FIELD_NS` (f266213v13539241), `MM_DISCONTENT_NODE_NS` (mécontentement,
+f266213n450834377), `DISCONTENT_THRESHOLD` (65) / `DISCONTENT_DECAY` (0.5),
+`CONV_RETENTION_DAYS` (30, purge RGPD), `SESSION_GAP_HOURS` (re-affichage mention IA),
 `MAX_CONCURRENCY`, `SEND_ALLOWLIST` (test : ne répondre qu'à ces user_ns), `NO_SEND`
 (0 = prod, 1 = muet).
 
