@@ -64,7 +64,7 @@ npm start            # serveur webhook (port 8130)
   ni closing creux ("n'hésitez pas...").
 - **Indice de mécontentement** : score lissé 0-100 (heuristique + LLM) par conversation ;
   au seuil `DISCONTENT_THRESHOLD` (65, moyen), déclenche UNE fois le node
-  `MM_DISCONTENT_NODE_NS=f266213n450834377`. Pas d'auto-escalade.
+  `MM_DISCONTENT_NODE_NS=f266213n450890375`. Pas d'auto-escalade.
 - **Rétention RGPD** : purge des conversations inactives > `CONV_RETENTION_DAYS` (30 j),
   au boot + 1×/jour (`purge-conv.mjs`). Les messages peuvent contenir des données de santé.
 - **KB du bot = source UNIQUE** (`kb_chunks` pgvector, projet dédié). L'onglet "Base de

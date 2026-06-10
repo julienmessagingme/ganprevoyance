@@ -6,7 +6,7 @@ vue produit dans `features.md`. Ce fichier ne garde que le travail en cours / à
 ## Fait récemment (depuis le dernier sync)
 - Résumé conseiller filtré RGPD (sans données de santé), reformulation fidèle sans prise
   de parti, plus de closing creux, acceptation ("ok merci") reconnue.
-- Indice de mécontentement (score lissé → node `f266213n450834377` au seuil 65, 1×).
+- Indice de mécontentement (score lissé → node `f266213n450890375` au seuil 65, 1×).
 - Purge RGPD des conversations à 30 j (boot + 1×/jour). Recherche KB hybride.
 - Entrée KB Service client (09 69 32 35 05). Node escalade → `f266213n450294757`.
 
