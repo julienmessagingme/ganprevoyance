@@ -236,6 +236,37 @@ export async function GET(
     refsByStep.set(r.step_id, arr);
   }
 
+  // PostgREST plafonne le nombre de lignes renvoyées par requête (`max-rows`,
+  // 1000 par défaut côté Supabase) : un simple `.limit(10000)` est
+  // SILENCIEUSEMENT tronqué à 1000. Pour compter ET coûter un event porteur de
+  // numéros avec >1000 occurrences (ex. un gros lancement WhatsApp), on pagine
+  // par `.range()` jusqu'à épuisement. `.order('id')` garantit une pagination
+  // stable. Le count est alors le nb réel de lignes (pas un cap à 1000).
+  async function fetchOccurrenceTextValues(
+    school: string,
+    evNs: string
+  ): Promise<string[]> {
+    const PAGE = 1000;
+    const MAX_ROWS = 200_000; // garde-fou dur (200 requêtes au pire)
+    const out: string[] = [];
+    for (let offset = 0; offset < MAX_ROWS; offset += PAGE) {
+      const { data, error } = await sb
+        .from("mm_occurrences")
+        .select("text_value")
+        .eq("school_slug", school)
+        .eq("event_ns", evNs)
+        .gte("occurred_at", fromTs)
+        .lt("occurred_at", toTs)
+        .order("id", { ascending: true })
+        .range(offset, offset + PAGE - 1);
+      if (error) throw error;
+      const rows = (data ?? []) as { text_value: string | null }[];
+      for (const r of rows) out.push(r.text_value ?? "");
+      if (rows.length < PAGE) break;
+    }
+    return out;
+  }
+
   async function computeRef(r: RefRow): Promise<ComputedRef> {
     if (r.step_type === "mm_event") {
       const evNs = r.event_ns!;
@@ -257,27 +288,13 @@ export async function GET(
       let metaCostEur: number | null;
       let metaBreakdown: MetaCostBreakdownItem[] | undefined;
       if (isPhoneCarrier) {
-        // Event porteur (text_label non vide) → on fetch les text_value
-        // pour calculer le coût Meta marketing par indicatif. Limite à
-        // 10 000 rows par event/période (au-delà, le coût sera sous-évalué
-        // et un warning serait à ajouter en V2).
-        const { data: occRows, error: occErr } = await sb
-          .from("mm_occurrences")
-          .select("text_value")
-          .eq("school_slug", dashSchool)
-          .eq("event_ns", evNs)
-          .gte("occurred_at", fromTs)
-          .lt("occurred_at", toTs)
-          .limit(10000);
-        if (occErr) {
-          count = 0;
-          metaCostEur = null;
-        } else {
-          const rows = (occRows ?? []) as { text_value: string | null }[];
-          count = rows.length;
-          const phones = rows
-            .map((r) => r.text_value ?? "")
-            .filter((p) => p.length > 0);
+        // Event porteur (text_label non vide) → on fetch tous les text_value
+        // (paginés, cf. fetchOccurrenceTextValues) pour calculer le coût Meta
+        // marketing par indicatif ET avoir le count réel.
+        try {
+          const textValues = await fetchOccurrenceTextValues(dashSchool, evNs);
+          count = textValues.length;
+          const phones = textValues.filter((p) => p.length > 0);
           const breakdown = groupMetaCostsByCountry(phones);
           metaBreakdown = breakdown.map((b) => ({
             iso: b.iso,
@@ -287,6 +304,9 @@ export async function GET(
             total_eur: b.totalEur,
           }));
           metaCostEur = metaBreakdown.reduce((s, b) => s + b.total_eur, 0);
+        } catch {
+          count = 0;
+          metaCostEur = null;
         }
       } else {
         // Event "compteur" classique : count(*) suffit.
@@ -461,20 +481,12 @@ export async function GET(
       const launchLabelMeta = mmLabels.get(launchKey);
 
       if (launchLabelMeta) {
-        const { data: launchOccs } = await sb
-          .from("mm_occurrences")
-          .select("text_value")
-          .eq("school_slug", dashSchool)
-          .eq("event_ns", launchRef.event_ns)
-          .gte("occurred_at", fromTs)
-          .lt("occurred_at", toTs)
-          .limit(10000);
-        const launchPhones = ((launchOccs ?? []) as {
-          text_value: string | null;
-        }[])
-          .map((r) => r.text_value ?? "")
-          .filter((p) => p.length > 0);
-        const launchCount = (launchOccs ?? []).length;
+        const launchTextValues = await fetchOccurrenceTextValues(
+          dashSchool,
+          launchRef.event_ns
+        );
+        const launchPhones = launchTextValues.filter((p) => p.length > 0);
+        const launchCount = launchTextValues.length;
         const launchBreakdown = groupMetaCostsByCountry(launchPhones).map(
           (b): MetaCostBreakdownItem => ({
             iso: b.iso,
