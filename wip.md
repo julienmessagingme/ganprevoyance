@@ -4,6 +4,9 @@ Projet **LIVE** : dashboard + bot en production. Archi détaillée dans `documen
 vue produit dans `features.md`. Ce fichier ne garde que le travail en cours / à surveiller.
 
 ## Fait récemment (depuis le dernier sync)
+- Revue bot : faux positif mécontentement (résiliation calme) corrigé ; parse du score
+  LLM durci (1er nombre, plus de concaténation de chiffres) ; rappels conformité déplacés
+  dans le system du tour (plus dans l'historique persisté).
 - Résumé conseiller filtré RGPD (sans données de santé), reformulation fidèle sans prise
   de parti, plus de closing creux, acceptation ("ok merci") reconnue.
 - Indice de mécontentement (score lissé → node `f266213n450890375` au seuil 65, 1×).
